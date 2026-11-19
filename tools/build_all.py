@@ -98,7 +98,14 @@ def build(path):
         if items: d["items"] = items
         d.update(extra); qs.append(d)
     ids = [q["id"] for q in qs]; assert len(ids) == len(set(ids)), "duplicate id"
-    subj = dict(id=meta["id"], name=meta["name"], icon=meta["icon"], examCount=meta["examCount"], categories=m.CATS, questions=qs)
+    cats_out = [dict(c) for c in m.CATS]
+    notes_file = ROOT / "notes" / path.name  # 分野ごとの要点（復習用の学習内容）
+    if notes_file.exists():
+        notes = load(notes_file).NOTES
+        assert set(notes) <= cats, (p, set(notes) - cats)
+        for c in cats_out:
+            if notes.get(c["id"]): c["note"] = list(notes[c["id"]])
+    subj = dict(id=meta["id"], name=meta["name"], icon=meta["icon"], examCount=meta["examCount"], categories=cats_out, questions=qs)
     (OUT / f"{meta['id']}.js").write_text("registerSubject(" + json.dumps(subj, ensure_ascii=False, separators=(",", ":")) + ");\n")
     kinds = Counter("一問一答" if not (q.get("type") or q.get("fixed")) else {"combo": "組合せ", "multi": "複数選択"}.get(q.get("type"), "5択") for q in qs)
     print(f"{meta['name']:<9} 計{len(qs):>4}  {dict(kinds)}")
