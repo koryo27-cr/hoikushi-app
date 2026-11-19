@@ -30,6 +30,9 @@ def build(path):
     more = ROOT / "specs_more" / path.name
     if more.exists():
         mm = load(more); simple += list(getattr(mm, "SIMPLE", [])); exam += list(getattr(mm, "EXAM", []))
+    add = ROOT / "specs_add" / path.name  # 公式過去問の分析で手薄だったテーマの追加分（2026-11）
+    if add.exists():
+        ma = load(add); simple += list(getattr(ma, "SIMPLE", [])); exam += list(getattr(ma, "EXAM", []))
     meta, p = m.META, m.META["prefix"]
     cats = {c["id"] for c in m.CATS}
     qs = []
