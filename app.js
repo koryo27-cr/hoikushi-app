@@ -185,7 +185,7 @@
     const weak = ALL.filter(isWeak).length;
     $app.innerHTML = `
       <div class="brand"><span class="badge">保育士試験対策</span></div>
-      <h1>保育士試験 問題集</h1>
+      <h1>保育士資格試験問題集</h1>
       <p class="lead">筆記試験 全9科目・${ALL.length}問。科目を選んでください。</p>
       ${statBox(all, weak)}
       <div class="modes" style="margin-bottom:22px">
@@ -214,7 +214,7 @@
       else start("全科目ミックス 20問", shuffle(ALL).slice(0, 20));
     });
     wireFooter();
-    document.title = "保育士試験 問題集";
+    document.title = "保育士資格試験問題集";
     window.scrollTo(0, 0);
   }
 
@@ -270,7 +270,7 @@
       start(`${S.name}：${c.name}`, QS.filter(q => q.c === c.id));
     });
     wireFooter();
-    document.title = `${S.name}｜保育士試験 問題集`;
+    document.title = `${S.name}｜保育士資格試験問題集`;
     window.scrollTo(0, 0);
   }
 
