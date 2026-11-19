@@ -12,18 +12,22 @@
   SUBJ.forEach(s => s.questions.forEach(q => { subjOfQ[q.id] = s.id; }));
   const ALL = SUBJ.flatMap(s => s.questions);
   const isExam = q => q.type === "combo" || q.type === "multi" || q.fixed;
+  const qById = Object.fromEntries(ALL.map(q => [q.id, q]));
+  const qThemes = {}; // 問題ID → 頻出テーマ（公式過去問の分析にもとづく）
+  SUBJ.forEach(s => (s.themes || []).forEach(t => t.qs.forEach(id => { (qThemes[id] = qThemes[id] || []).push(t); })));
   const catOf = q => subjById[subjOfQ[q.id]].categories.find(c => c.id === q.c) || { icon: "", name: "", id: q.c };
 
   // ---------- local storage (safe) ----------
   // stats: 元の形式での成績 { id: {c, w, last, t} }
   // rv:    復習の段階 { id: {s, d, t} }  s=1 別の形 → 2 元の形式 → 3 翌日（別の形）→ 4 4日後（元の形式）→ 0 卒業
-  let stats = {}, rv = {}, resetAt = 0, resets = {};
+  // fm:    正解できた形式 { id: {m: ビット, t} }（形式を変えても正解できる＝理解の目安）
+  let stats = {}, rv = {}, fm = {}, resetAt = 0, resets = {};
   try {
     const raw = JSON.parse(localStorage.getItem(STORE_KEY) || "{}") || {};
-    if (raw.stats) { stats = raw.stats; rv = raw.rv || {}; resetAt = raw.resetAt || 0; resets = raw.resets || {}; }
+    if (raw.stats) { stats = raw.stats; rv = raw.rv || {}; fm = raw.fm || {}; resetAt = raw.resetAt || 0; resets = raw.resets || {}; }
     else stats = raw;
   } catch (e) { stats = {}; }
-  function saveLocal() { try { localStorage.setItem(STORE_KEY, JSON.stringify({ stats, rv, resetAt, resets })); } catch (e) {} }
+  function saveLocal() { try { localStorage.setItem(STORE_KEY, JSON.stringify({ stats, rv, fm, resetAt, resets })); } catch (e) {} }
 
   const cutoffFor = id => Math.max(resetAt, resets[subjOfQ[id]] || 0);
   function merge(a, b) {
@@ -51,6 +55,16 @@
     });
     return out;
   }
+  function mergeFm(a, b) {
+    const out = {};
+    new Set([...Object.keys(a), ...Object.keys(b)]).forEach(id => {
+      const x = a[id], y = b[id];
+      const r = !x ? y : !y ? x : { m: (x.m | y.m), t: Math.max(x.t || 0, y.t || 0) };
+      const cut = cutoffFor(id);
+      if (r && (cut === 0 || (r.t || 0) > cut)) out[id] = r;
+    });
+    return out;
+  }
   // 以前の版の記録（直近で不正解）や他の端末の記録から、復習リストを補う
   function syncRv() {
     Object.entries(stats).forEach(([id, s]) => {
@@ -65,22 +79,41 @@
 
   // ---------- review cycle ----------
   const STEP_FORM = { 1: "v", 2: "o", 3: "v", 4: "o" };
-  const STEP_NAME = { 1: "復習① 別の形で", 2: "復習② 元の形式で", 3: "復習③ 翌日の確認", 4: "復習④ 仕上げ" };
+  const STEP_NAME = { 1: "復習① 別の形", 2: "復習② 元の形式で", 3: "復習③ 翌日の確認", 4: "復習④ 仕上げ" };
+  const stepName = q => rv[q.id].f ? "頻出・定着チェック" : STEP_NAME[rv[q.id].s];
   const dayStart = t => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); };
   const inQueue = q => !!(rv[q.id] && rv[q.id].s > 0);
   const isDue = q => inQueue(q) && (rv[q.id].d || 0) <= Date.now();
   const formFor = q => STEP_FORM[rv[q.id].s] || "o";
+  // 頻出問題は、形式を変えて何度か正解するまで「定着チェック」で再出題する
+  function scheduleCheck(id, now, days) {
+    const q = qById[id];
+    if (!q || !isHot(q) || formCount(q) >= targetForms(q)) return false;
+    rv[id] = { s: 3, d: dayStart(now) + days * DAY, t: now, f: 1 };
+    return true;
+  }
   function rvUpdate(id, ok, form) {
     const now = Date.now(), r = rv[id];
     if (!ok) { rv[id] = { s: 1, d: now, t: now }; return "fail"; }
-    if (!r || !r.s || (r.d || 0) > now || STEP_FORM[r.s] !== form) return null;
+    if (!r || !r.s) return scheduleCheck(id, now, formCount(qById[id]) <= 1 ? 2 : 5) ? "check" : null;
+    if ((r.d || 0) > now || STEP_FORM[r.s] !== form) return null;
+    if (r.f) { // 定着チェック（別の形）に正解
+      if (scheduleCheck(id, now, 6)) return "check2";
+      rv[id] = { s: 0, d: 0, t: now }; return "fixed";
+    }
     if (r.s === 1) rv[id] = { s: 2, d: now, t: now };
     else if (r.s === 2) rv[id] = { s: 3, d: dayStart(now) + DAY, t: now };
     else if (r.s === 3) rv[id] = { s: 4, d: dayStart(now) + 4 * DAY, t: now };
-    else rv[id] = { s: 0, d: 0, t: now };
+    else { rv[id] = { s: 0, d: 0, t: now }; if (scheduleCheck(id, now, 7)) return "grad-check"; }
     return rv[id].s;
   }
+  function markForm(id, ok, bit) {
+    if (!ok) return;
+    const f = fm[id] || { m: 0, t: 0 };
+    fm[id] = { m: f.m | bit, t: Date.now() };
+  }
   function record(id, ok) {
+    markForm(id, ok, 1);
     const s = Object.assign({ c: 0, w: 0, last: null }, stats[id]);
     ok ? s.c++ : s.w++;
     s.last = ok; s.t = Date.now();
@@ -89,7 +122,7 @@
     saveLocal(); schedulePush();
     return step;
   }
-  function recordV(id, ok) { const step = rvUpdate(id, ok, "v"); saveLocal(); schedulePush(); return step; }
+  function recordV(id, ok, kind) { markForm(id, ok, KIND_BIT[kind] || 2); const step = rvUpdate(id, ok, "v"); saveLocal(); schedulePush(); return step; }
   function nextReview(qs) {
     const later = qs.filter(q => inQueue(q) && !isDue(q)).map(q => rv[q.id].d);
     if (!later.length) return null;
@@ -110,14 +143,14 @@
     }[syncState];
     return `<span class="sync ${m[0]}" id="sync"><i></i>${m[1]}</span>`;
   }
-  const snapshot = () => JSON.stringify([stats, rv, resetAt, resets]);
+  const snapshot = () => JSON.stringify([stats, rv, fm, resetAt, resets]);
   function schedulePush() { if (!docRef) return; clearTimeout(pushTimer); pushTimer = setTimeout(push, 1500); }
   async function push() {
     if (!docRef) return;
     if (writing) { dirty = true; return; }
     writing = true;
     try {
-      await docRef.set({ stats: JSON.parse(JSON.stringify(stats)), rv: JSON.parse(JSON.stringify(rv)), resetAt, resets: Object.assign({}, resets), updatedAt: Date.now() });
+      await docRef.set({ stats: JSON.parse(JSON.stringify(stats)), rv: JSON.parse(JSON.stringify(rv)), fm: JSON.parse(JSON.stringify(fm)), resetAt, resets: Object.assign({}, resets), updatedAt: Date.now() });
       if (syncState !== "on") setSync("on");
     } catch (e) {
       if (e && e.code === "unavailable") setTimeout(push, 1500 + Math.random() * 1500);
@@ -133,6 +166,7 @@
     absorbMeta(body.resetAt, body.resets);
     stats = merge(stats, body.stats || {});
     rv = mergeRv(rv, body.rv || {});
+    fm = mergeFm(fm, body.fm || {});
     syncRv();
     saveLocal();
     return snapshot() !== before;
@@ -151,7 +185,7 @@
       docRef = ref;
       const remote = snap.exists ? snap.data() : null;
       const changed = absorb(remote);
-      if (!remote || JSON.stringify([remote.stats || {}, remote.rv || {}, remote.resetAt || 0, remote.resets || {}]) !== snapshot()) await push();
+      if (!remote || JSON.stringify([remote.stats || {}, remote.rv || {}, remote.fm || {}, remote.resetAt || 0, remote.resets || {}]) !== snapshot()) await push();
       setSync("on");
       if (changed && !session) route();
       ref.onSnapshot(s => {
@@ -221,33 +255,104 @@
   }
 
   // ---------- 別の形への作り替え ----------
-  // 間違えた問題を、同じ知識を別の角度から問う形に組み替える
-  function variantOf(q) {
+  // 同じ知識を別の角度から問う形に組み替える。形式（kind）は複数あり、出題のたびに入れ替える。
+  //   ox:1文ずつ○×  mix:同じテーマの別の問題の文と混ぜて○×  pick:組合せ・空欄を1つずつ選ぶ
+  //   rev:逆向き（答え→問い、ア〜エ→A〜D）  fill:空欄の語句の正誤判定  recall:想起してから判定
+  const KIND_BIT = { ox: 2, mix: 4, pick: 8, rev: 16, fill: 32, recall: 64 };
+  const KIND_NAME = { o: "元の形式", ox: "1文ずつ○×", mix: "他の問題と混ぜて○×", pick: "1つずつ選ぶ", rev: "逆向きに考える", fill: "語句の正誤判定", recall: "思い出してから判定" };
+  const isCase = q => q.q.includes("【事例】");
+  const isSimple = q => !q.type && !q.fixed;
+  function revPool(q) { // 逆向き問題に使える、同じ分野の一問一答
+    return subjById[subjOfQ[q.id]].questions.filter(x => x !== q && isSimple(x) && x.c === q.c && x.o[x.a] !== q.o[q.a] && !x.o.includes(q.o[q.a]));
+  }
+  function stmtSources(q) { // 混ぜる文の出どころ：同じテーマ（なければ同じ分野）の、事例でない○×系の問題
+    const themes = qThemes[q.id] || [];
+    const near = new Set(themes.flatMap(t => t.qs));
+    const ok = x => x !== q && truths(x) && !isCase(x);
+    let src = [...near].map(id => qById[id]).filter(x => x && ok(x));
+    if (src.length < 2) src = subjById[subjOfQ[q.id]].questions.filter(x => x.c === q.c && ok(x));
+    return src;
+  }
+  function kindsOf(q) {
+    if (truths(q)) return isCase(q) ? ["ox"] : (stmtSources(q).length >= 2 ? ["ox", "mix"] : ["ox"]);
+    if (isMatch(q)) return ["pick", "rev"];
+    if (isBlank(q)) return ["pick", "fill"];
+    if (isSimple(q) && revPool(q).length >= 3) return ["recall", "rev"];
+    return ["recall"];
+  }
+  const fmBits = q => (fm[q.id] && fm[q.id].m) || 0;
+  const popcount = n => { let c = 0; while (n) { c += n & 1; n >>= 1; } return c; };
+  const formCount = q => q ? popcount(fmBits(q)) : 0;
+  // 頻出度：公式過去問（直近3回）でのテーマの出題数 8問以上＝2（最頻出）、4問以上＝1（頻出）
+  const hotLevel = q => { const n = Math.max(0, ...(qThemes[q.id] || []).map(t => t.exam || 0)); return n >= 8 ? 2 : n >= 4 ? 1 : 0; };
+  const isHot = q => hotLevel(q) > 0;
+  // 理解の目安：最頻出は3つ、頻出は2つの形式で正解（その問題で作れる形式の数が上限）
+  const targetForms = q => Math.min(1 + kindsOf(q).length, hotLevel(q) === 2 ? 3 : hotLevel(q) === 1 ? 2 : 1);
+  function pickKind(q) { // まだ正解していない形式を優先
+    const ks = kindsOf(q), fresh = ks.filter(k => !(fmBits(q) & KIND_BIT[k]));
+    const pool = fresh.length ? fresh : ks;
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+  const stripLabel = t => t.replace(/^[A-E]\s+/, "").replace(/^[A-E]　/, "");
+  const topicOf = q => isTF(q) ? (stripLead(q).match(/【(.+?)】/) || [, ""])[1] : firstLine(q).replace(/^次のうち、|^次の文は、|^次の/, "").replace(/(として|について|に関する|に示され|の説明).*$/, "").slice(0, 40);
+
+  function variantOf(q, kind) {
+    kind = kind || pickKind(q);
     const ox = ["○", "×"];
     const tr = truths(q);
-    if (isTF(q)) {
-      const cs = q.q.includes("【事例】");
-      return { kind: "ox", lead: (cs ? "【事例】の対応として、" : "") + "A〜" + KEYS4.concat("E")[q.items.length - 1] + "を1文ずつ、適切なら○、不適切なら×で判定しましょう。",
-        ctx: stripLead(q), rows: q.items.map((s, k) => ({ t: s, ch: ox, a: tr[k] ? 0 : 1 })) };
+    if (kind === "mix" && tr) {
+      const ss = stmtsOf(q);
+      const own = shuffle(ss.map((t, i) => ({ t: stripLabel(t), a: tr[i] ? 0 : 1, src: topicOf(q) })));
+      const mine = own.filter(r => r.a === 1).slice(0, 1).concat(own.filter(r => r.a === 0).slice(0, 1));
+      own.forEach(r => { if (mine.length < 3 && !mine.includes(r)) mine.push(r); });
+      const others = shuffle(stmtSources(q)).slice(0, 2).map(x => {
+        const xt = truths(x), xs = stmtsOf(x), i = Math.floor(Math.random() * xs.length);
+        return { t: stripLabel(xs[i]), a: xt[i] ? 0 : 1, src: topicOf(x), other: x.id };
+      });
+      return { kind, lay: "ox", lead: "この問題の文に、同じテーマの別の問題の文を混ぜました。知識をつなげて、1文ずつ○×で判定しましょう。",
+        rows: shuffle(mine.concat(others)).map(r => ({ t: r.t, ch: ox, a: r.a, src: r.src, other: r.other })) };
     }
     if (tr) {
-      return { kind: "ox", lead: "選択肢を1つずつ、適切なら○、不適切なら×で判定しましょう。", orig: q.q,
-        rows: q.o.map((s, i) => ({ t: (q.type === "multi" ? (i + 1) + ". " : "") + s, ch: ox, a: tr[i] ? 0 : 1 })) };
+      if (isTF(q)) {
+        return { kind: "ox", lay: "ox", lead: (isCase(q) ? "【事例】の対応として、" : "") + "A〜" + KEYS4.concat("E")[q.items.length - 1] + "を1文ずつ、適切なら○、不適切なら×で判定しましょう。",
+          ctx: stripLead(q), rows: q.items.map((t, k) => ({ t, ch: ox, a: tr[k] ? 0 : 1 })) };
+      }
+      return { kind: "ox", lay: "ox", lead: "選択肢を1つずつ、適切なら○、不適切なら×で判定しましょう。", orig: q.q,
+        rows: q.o.map((t, i) => ({ t: (q.type === "multi" ? (i + 1) + ". " : "") + t, ch: ox, a: tr[i] ? 0 : 1 })) };
     }
     if (isMatch(q)) {
       const labels = q.pool.map((_, i) => KANA[i]);
-      return { kind: "pick", lead: "組合せの選択肢を見ずに、それぞれに当てはまるものを" + labels[0] + "〜" + labels[labels.length - 1] + "から選びましょう。",
-        orig: q.q, pool: q.pool, rows: q.items.map((s, k) => ({ t: s, ch: labels, a: labels.indexOf(q.o[q.a][k]) })) };
+      if (kind === "rev") {
+        const lefts = q.items.map((_, i) => LABELS[i]);
+        return { kind, lay: "pick", lead: "逆向きに考えましょう。ア〜それぞれが、A〜のどれに当てはまるかを選びます。", orig: q.q, ctx: q.items.join("\n"),
+          rows: shuffle(q.pool.map((t, i) => ({ t, ch: lefts, a: q.o[q.a].indexOf(KANA[i]) }))) };
+      }
+      return { kind: "pick", lay: "pick", lead: "組合せの選択肢を見ずに、それぞれに当てはまるものを" + labels[0] + "〜" + labels[labels.length - 1] + "から選びましょう。",
+        orig: q.q, pool: q.pool, rows: q.items.map((t, k) => ({ t, ch: labels, a: labels.indexOf(q.o[q.a][k]) })) };
     }
     if (isBlank(q)) {
-      return { kind: "pick", lead: "空欄ごとに、当てはまる語句を選びましょう。", ctx: stripLead(q) || q.q,
-        rows: q.cols.map((c, k) => { const ch = shuffle([...new Set(q.o.map(o => o[k]))]); return { t: `（${c}）`, ch, a: ch.indexOf(q.o[q.a][k]) }; }) };
+      const cands = q.cols.map((_, k) => [...new Set(q.o.map(o => o[k]))]);
+      if (kind === "fill") {
+        return { kind, lay: "ox", lead: "空欄に入る語句として正しければ○、誤りなら×を選びましょう。", ctx: stripLead(q) || q.q,
+          rows: q.cols.map((c, k) => {
+            const right = q.o[q.a][k], wrong = cands[k].filter(x => x !== right);
+            const show = Math.random() < 0.5 || !wrong.length ? right : wrong[Math.floor(Math.random() * wrong.length)];
+            return { t: `（${c}）＝「${show}」`, ch: ox, a: show === right ? 0 : 1 };
+          }) };
+      }
+      return { kind: "pick", lay: "pick", lead: "空欄ごとに、当てはまる語句を選びましょう。", ctx: stripLead(q) || q.q,
+        rows: q.cols.map((c, k) => { const ch = shuffle(cands[k]); return { t: `（${c}）`, ch, a: ch.indexOf(q.o[q.a][k]) }; }) };
     }
-    // 一問一答・その他の5択：選択肢を隠して想起 → 候補を1つずつ判定
+    if (kind === "rev") {
+      const qs = shuffle([q, ...shuffle(revPool(q)).slice(0, 3)]);
+      return { kind, lay: "pick", lead: "逆向きに考えましょう。次の語句が答えになるのは、どの問いですか。", col: true,
+        rows: [{ t: "答え：「" + q.o[q.a] + "」", ch: qs.map(x => x.q), a: qs.indexOf(q) }] };
+    }
     const wrongs = shuffle(q.o.map((_, i) => i).filter(i => i !== q.a)).slice(0, 2);
-    return { kind: "ox", recall: true, lead: "選択肢を見る前に答えを思い浮かべましょう。そのあと、候補がこの問いの答えなら○、ちがえば×を選びます。",
+    return { kind: "recall", lay: "ox", recall: true, lead: "選択肢を見る前に答えを思い浮かべましょう。そのあと、候補がこの問いの答えなら○、ちがえば×を選びます。",
       ctx: q.q, rows: shuffle([q.a, ...wrongs]).map(i => ({ t: q.o[i], ch: ox, a: i === q.a ? 0 : 1 })) };
   }
+  const LABELS = ["A", "B", "C", "D", "E"];
 
   // ---------- 学習内容（復習ポイント） ----------
   function factsHtml(q) {
@@ -334,8 +439,8 @@
   }
 
   // ---------- session ----------
-  function makeItem(q, form) {
-    if (form === "v") return { q, form: "v", v: variantOf(q), picks: [], phase: 0 };
+  function makeItem(q, form, kind) {
+    if (form === "v") return { q, form: "v", v: variantOf(q, kind), picks: [], phase: 0 };
     if (q.type === "multi") return { q, form: "o", order: q.o.map((_, i) => i), answer: q.a, exam: true, multi: true, sel: [] };
     if (isExam(q)) return { q, form: "o", order: q.o.map((_, i) => i), answer: q.a, exam: true };
     const order = shuffle(q.o.map((_, i) => i));
@@ -346,12 +451,34 @@
     if (!pool.length) return;
     opts = opts || {};
     session = {
-      title, back: current ? current.id : null, review: !!opts.review,
-      items: shuffle(pool).map(x => x.form ? makeItem(x.q, x.form) : makeItem(x, "o")),
+      title, back: current ? current.id : null, review: !!opts.review, theme: opts.theme || null,
+      u0: opts.theme ? themeUnderstanding(opts.theme) : null,
+      items: (opts.keep ? pool : shuffle(pool)).map(x => x.form ? makeItem(x.q, x.form, x.kind) : makeItem(x, "o")),
       i: 0, results: []
     };
     renderQuestion();
   }
+  // 理解度（0〜1）：目安の形式数に対して何形式で正解したか
+  const understanding = q => Math.min(formCount(q), Math.max(2, targetForms(q))) / Math.max(2, targetForms(q));
+  const themeUnderstanding = t => { const qs = t.qs.map(id => qById[id]).filter(Boolean); return qs.length ? Math.round(qs.reduce((a, q) => a + understanding(q), 0) / qs.length * 100) : 0; };
+  // 形を変えて繰り返すドリル：理解度の低い問題から選び、まだ正解していない形式で出題。
+  // 理解度の低い問題は、間をあけて別の形式でもう一度出す。
+  function drillItems(qs, n) {
+    const order = shuffle(qs).sort((a, b) => (understanding(a) - understanding(b)) || ((isWeakQ(b) ? 1 : 0) - (isWeakQ(a) ? 1 : 0)));
+    const chosen = order.slice(0, n);
+    const formFor1 = q => !(fmBits(q) & 1) && Math.random() < 0.5 ? { q, form: "o" } : { q, form: "v", kind: pickKind(q) };
+    const first = shuffle(chosen.map(formFor1));
+    const again = chosen.filter(q => understanding(q) < 0.5).slice(0, Math.ceil(n / 3)).map(q => {
+      const used = first.find(x => x.q === q);
+      const ks = kindsOf(q).filter(k => k !== used.kind);
+      return used.form === "o" ? { q, form: "v", kind: pickKind(q) } : ks.length ? { q, form: "v", kind: ks[Math.floor(Math.random() * ks.length)] } : { q, form: "o" };
+    });
+    // 2回目は、1回目から3問以上あけて後半に並べる
+    const out = first.slice();
+    shuffle(again).forEach(x => { const i0 = out.findIndex(y => y.q === x.q); const pos = Math.min(out.length, Math.max(i0 + 4, Math.floor(out.length * 0.6) + Math.floor(Math.random() * 3))); out.splice(pos, 0, x); });
+    return out;
+  }
+  const isWeakQ = q => stats[q.id] && stats[q.id].last === false;
   const reviewPool = qs => qs.filter(isDue).map(q => ({ q, form: formFor(q) }));
   const label = (it, k) => it.exam ? String(k + 1) : KEYS4[k];
 
@@ -381,6 +508,7 @@
         <li>まず<b>別の形</b>（1文ずつの○×判定、組合せを使わない選択、空欄ごとの選択、答えを思い出してからの判定）で出題。</li>
         <li>別の形で全部正解できたら、続けて<b>元の形式</b>でもう一度。</li>
         <li>元の形式で正解したら<b>翌日</b>、さらに<b>4日後</b>に確認して、正解なら卒業です。途中で間違えると最初に戻ります。</li>
+        <li><b>頻出問題</b>（公式過去問の直近3回で多く出たテーマ）は、正解しても日をおいて<b>別の形式</b>でもう一度出題。最頻出は3つ、頻出は2つの形式で正解できたら「理解できた」とみなします。</li>
       </ol>
       <p>間違えたときは「正しい知識の整理」「分野の要点」「関連知識」が表示されます。</p></details>`;
 
@@ -395,6 +523,7 @@
       ${statBox(all, queued)}
       <div class="modes" style="margin-bottom:10px">
         ${reviewButton(ALL, 'data-top="review"', true)}
+        <button class="mode" data-top="hot"><span class="t">🔥 頻出ドリル 12問</span><span class="d">過去問の頻出テーマを形を変えて</span></button>
         <button class="mode" data-top="random"><span class="t">全科目ミックス 20問</span><span class="d">科目をまたいでおまかせ出題</span></button>
       </div>
       ${howto}
@@ -419,6 +548,7 @@
     $app.querySelectorAll("[data-subj]").forEach(b => b.onclick = () => go(b.dataset.subj));
     $app.querySelectorAll("[data-top]").forEach(b => b.onclick = () => {
       if (b.dataset.top === "review") start("全科目の復習", reviewPool(ALL), { review: true });
+      else if (b.dataset.top === "hot") start("頻出ドリル（全科目）", drillItems(ALL.filter(q => hotLevel(q) === 2), 12), { keep: true });
       else start("全科目ミックス 20問", shuffle(ALL).slice(0, 20));
     });
     wireWeak();
@@ -472,6 +602,7 @@
         <button class="mode" data-mode="unseen" ${all.tried < all.total ? "" : "disabled"}><span class="t">未挑戦の問題</span><span class="d">あと${all.total - all.tried}問</span></button>
       </div>
       ${weakHtml(S)}
+      ${themesHtml(S)}
       <h2 class="section-title">分野別に解く・要点を読む</h2>
       <div class="cats">
         ${S.categories.map(c => {
@@ -509,10 +640,29 @@
       start(`${S.name}：${c.name}`, QS.filter(q => q.c === c.id));
     });
     $app.querySelectorAll("[data-note]").forEach(b => b.onclick = () => go(`${S.id}/${b.dataset.note}`));
+    $app.querySelectorAll("[data-theme]").forEach(b => b.onclick = () => {
+      const t = S.themes.find(x => x.id === b.dataset.theme);
+      const qs = t.qs.map(id => qById[id]).filter(Boolean);
+      start(`頻出テーマ：${t.name}`, drillItems(qs, Math.min(10, qs.length)), { keep: true, theme: t });
+    });
     wireWeak();
     wireFooter();
     document.title = `${S.name}｜保育士資格試験問題集`;
     window.scrollTo(0, 0);
+  }
+
+  function themesHtml(S) {
+    const ts = (S.themes || []).filter(t => t.qs.length).slice().sort((a, b) => b.exam - a.exam);
+    if (!ts.length) return "";
+    return `<h2 class="section-title">📊 頻出テーマで理解を深める<small>公式過去問（直近3回）の出題数順</small></h2>
+      <div class="themes">${ts.map(t => { const u = themeUnderstanding(t);
+        return `<button class="theme" data-theme="${t.id}">
+          <span class="tn">${t.exam >= 8 ? '<span class="tag-hot">🔥 最頻出</span>' : t.exam >= 4 ? '<span class="tag-hot">頻出</span>' : ""}${esc(t.name)}</span>
+          <span class="tm">過去3回で<b>${t.exam}問</b>出題・アプリ${t.qs.length}問</span>
+          <span class="tr">${esc(t.refs)}</span>
+          <span class="tu"><span class="bar"><i style="width:${u}%"></i></span><small>理解度 ${u}%</small></span>
+        </button>`; }).join("")}</div>
+      <p class="note" style="margin:-14px 2px 22px">タップすると、テーマの問題を形式を変えながら出題します（元の形式・1文ずつ○×・他の問題と混ぜる・逆向き など）。理解度は「いくつの形式で正解できたか」で測ります。</p>`;
   }
 
   // 分野の要点ページ
@@ -533,7 +683,7 @@
         <button class="mode" id="n-rv" ${due.length ? "" : "disabled"}><span class="t">この分野の復習</span><span class="d">${due.length ? due.length + "問" : "今日の分はありません"}</span></button>
       </div>
       ${queued.length ? `<h2 class="section-title">この分野で復習中の問題</h2>
-        <div class="missed">${queued.map(q => `<details class="missed-item"><summary>${esc(shortQ(q))}<span class="stage">${STEP_NAME[rv[q.id].s]}${isDue(q) ? "" : "（" + fmtDay(rv[q.id].d) + "）"}</span></summary>
+        <div class="missed">${queued.map(q => `<details class="missed-item"><summary>${esc(shortQ(q))}<span class="stage">${stepName(q)}${isDue(q) ? "" : "（" + fmtDay(rv[q.id].d) + "）"}</span></summary>
           <div class="sb">${factsHtml(q)}<p class="ex">${esc(q.e)}</p></div></details>`).join("")}</div>` : ""}
       ${footer()}`;
     document.getElementById("to-subj").onclick = () => go(S.id);
@@ -568,7 +718,7 @@
 
   function header(it) {
     const q = it.q, S = subjById[subjOfQ[q.id]], cat = catOf(q), n = session.items.length;
-    const stage = isDue(q) && formFor(q) === it.form ? `<span class="tag-rv">${STEP_NAME[rv[q.id].s]}</span>` : "";
+    const stage = isDue(q) && formFor(q) === it.form ? `<span class="tag-rv">${stepName(q)}</span>` : "";
     return `
       <div class="topbar">
         <button class="back" id="quit">← やめる</button>
@@ -576,7 +726,21 @@
         <span class="count">${session.i + 1} / ${n}</span>
       </div>
       <div class="qcard">
-        <div class="qcat">${session.back ? "" : `<span class="tag-subj">${esc(S.name)}</span>`}${cat.icon} ${esc(cat.name)}${it.exam ? '<span class="tag-exam">本番形式</span>' : ""}${stage || (it.form === "v" ? '<span class="tag-v">🔁 別の形で</span>' : "")}</div>`;
+        <div class="qcat">${session.back ? "" : `<span class="tag-subj">${esc(S.name)}</span>`}${cat.icon} ${esc(cat.name)}${it.exam ? '<span class="tag-exam">本番形式</span>' : ""}${hotTag(q)}${stage}${it.form === "v" ? `<span class="tag-v">🔁 ${KIND_NAME[it.v.kind]}</span>` : ""}</div>`;
+  }
+  const hotTag = q => { const h = hotLevel(q); return h ? `<span class="tag-hot">${h === 2 ? "🔥 最頻出" : "頻出"}</span>` : ""; };
+  // 理解度：正解できた形式の数（形式を変えても正解できる＝理解できている）
+  function understandHtml(q) {
+    const n = formCount(q), target = Math.max(2, targetForms(q)), bits = fmBits(q);
+    const stars = Array.from({ length: target }, (_, i) => i < n ? "★" : "☆").join("");
+    const done = ["o", ...kindsOf(q)].filter(k => bits & (k === "o" ? 1 : KIND_BIT[k])).map(k => KIND_NAME[k]);
+    const th = (qThemes[q.id] || []).slice().sort((a, b) => b.exam - a.exam)[0];
+    const msg = n >= target ? "形式を変えても正解できています。理解できている状態です。"
+      : n === 0 ? "まだどの形式でも正解していません。"
+      : `あと${target - n}つ、別の形式で正解すると理解の目安に届きます。${isHot(q) ? "頻出問題なので、日をおいて別の形式で出題します。" : ""}`;
+    return `<div class="understand"><div class="uh"><span>理解度</span><b>${stars}</b><small>${done.length ? "正解した形式：" + done.join("・") : ""}</small></div>
+      <div class="um">${msg}</div>
+      ${th ? `<div class="uth">📊 テーマ「${esc(th.name)}」は公式過去問（直近3回）で<b>${th.exam}問</b>出題</div>` : ""}</div>`;
   }
   function wireCommon() {
     document.getElementById("quit").onclick = () => session.results.length ? renderResult() : leave();
@@ -614,9 +778,9 @@
         ${v.pool ? `<div class="stmts pool">${v.pool.map(s => `<div>${esc(s)}</div>`).join("")}</div>` : ""}
         ${hideRows ? `<button class="submit recall" id="reveal">💭 答えを思い浮かべたら、タップして判定へ</button>` : ""}
         <div class="jrows" id="jrows" ${hideRows ? 'style="display:none"' : ""}>
-          ${v.rows.map((r, k) => `<div class="jrow ${v.kind}" data-r="${k}">
-            <div class="jt">${esc(r.t)}</div>
-            <div class="jc">${r.ch.map((c, j) => `<button class="jb" data-r="${k}" data-j="${j}">${esc(c)}</button>`).join("")}</div>
+          ${v.rows.map((r, k) => `<div class="jrow ${v.lay}${v.col ? " col" : ""}" data-r="${k}">
+            <div class="jt">${esc(r.t)}${r.src ? `<span class="jsrc">${esc(r.src)}</span>` : ""}</div>
+            <div class="jc${v.col ? " col" : ""}">${r.ch.map((c, j) => `<button class="jb" data-r="${k}" data-j="${j}">${esc(c)}</button>`).join("")}</div>
           </div>`).join("")}
         </div>
         <button class="submit" id="jsubmit" disabled ${hideRows ? 'style="display:none"' : ""}>答え合わせ（0 / ${v.rows.length}）</button>
@@ -665,7 +829,7 @@
       });
     });
     const ok = miss === 0;
-    const step = recordV(it.q.id, ok);
+    const step = recordV(it.q.id, ok, it.v.kind);
     session.results.push({ q: it.q, ok, form: "v" });
     if (step === 2) { session.items.push(makeItem(it.q, "o")); it.appended = true; }
     document.getElementById("jsubmit").style.display = "none";
@@ -718,13 +882,22 @@
     });
     showExplain(it, ok, "正解は " + label(it, it.answer), step);
   }
+  function mixHtml(it) {
+    const others = it.v.rows.filter(r => r.other).map(r => qById[r.other]).filter(Boolean);
+    if (!others.length) return "";
+    return `<details class="sd"${it.v.rows.some((r, k) => r.other && it.picks[k] !== r.a) ? " open" : ""}><summary>🧩 混ぜた文の出典と解説</summary><div class="sb">${others.map(relHtml).join("")}</div></details>`;
+  }
   function stepNote(step, it) {
     const m = {
       fail: it.form === "v" ? "📝 復習リストに残ります。解説と要点を読んでから、もう一度挑戦しましょう。" : "📝 「今日の復習」に入りました。次は別の形で出題します。",
       2: it.appended ? "✅ 別の形でクリア！このあと元の形式でもう一度確認します。" : "✅ 別の形でクリア！次は元の形式で確認します。",
       3: "✅ 元の形式でも正解。明日もう一度確認します。",
       4: "✅ 翌日の確認もクリア。4日後に仕上げの確認をします。",
-      0: "🎉 復習完了！この問題は卒業です。"
+      0: "🎉 復習完了！この問題は卒業です。",
+      check: "🔥 頻出問題です。理解を確かめるため、日をおいて別の形式でもう一度出題します。",
+      check2: "✅ 別の形式でも正解！もう1つ別の形式で、日をおいて確認します。",
+      fixed: "🎉 複数の形式で正解できました。この問題は定着しています。",
+      "grad-check": "🎉 復習完了！頻出問題なので、1週間後に別の形式でもう一度確認します。"
     }[step];
     return m ? `<div class="stepnote">${m}</div>` : "";
   }
@@ -735,6 +908,8 @@
     ex.innerHTML = `<div class="verdict">${ok ? (it.form === "v" ? "全部正解！" : "正解！") : "不正解… " + esc(ngText)}</div>
       <div class="etext">${esc(it.q.e)}</div>
       ${stepNote(step, it)}
+      ${understandHtml(it.q)}
+      ${it.form === "v" && it.v.kind === "mix" ? mixHtml(it) : ""}
       ${studyHtml(it.q, ok)}
       ${!ok && it.form === "o" && !laterHasV ? `<button class="again" id="again">🔁 この問題を別の形ですぐ確認する</button>` : ""}`;
     const ag = document.getElementById("again");
@@ -781,6 +956,8 @@
         <p class="msg">${msg[0]}</p>
         <p class="submsg">${esc(session.title)}　${msg[1]}</p>
         ${graduated ? `<p class="grad">🎉 ${graduated}問が復習を卒業しました</p>` : ""}
+        ${session.theme ? `<p class="grad">テーマの理解度 ${session.u0}% → <b>${themeUnderstanding(session.theme)}%</b></p>` : ""}
+        ${(() => { const fr = [...new Set(r.filter(x => x.ok).map(x => x.q))].filter(q => formCount(q) >= 2).length; return fr ? `<p class="submsg">2つ以上の形式で正解できている問題：${fr}問</p>` : ""; })()}
       </div>
       ${catList.length ? `<div class="weakbox"><div class="wt">📖 今回つまずいた分野の要点</div>
         ${catList.map(([k, n]) => { const [sid, cid] = k.split("/"); const s = subjById[sid], c = s.categories.find(x => x.id === cid);
@@ -828,7 +1005,7 @@
   // ---------- transfer code (works without login) ----------
   const CODE_PREFIX = "HKG1:";
   function encode() {
-    return CODE_PREFIX + btoa(unescape(encodeURIComponent(JSON.stringify({ s: stats, v: rv, r: resetAt, rs: resets }))));
+    return CODE_PREFIX + btoa(unescape(encodeURIComponent(JSON.stringify({ s: stats, v: rv, f: fm, r: resetAt, rs: resets }))));
   }
   function decode(code) {
     code = code.replace(/\s+/g, "");
@@ -864,8 +1041,13 @@
       Object.entries(obj.v && typeof obj.v === "object" ? obj.v : {}).forEach(([id, v]) => {
         if (v && typeof v === "object") cleanV[id] = { s: Math.max(0, Math.min(4, +v.s || 0)), d: +v.d || 0, t: +v.t || 0 };
       });
+      const cleanF = {};
+      Object.entries(obj.f && typeof obj.f === "object" ? obj.f : {}).forEach(([id, v]) => {
+        if (v && typeof v === "object") cleanF[id] = { m: (+v.m || 0) & 255, t: +v.t || 0 };
+      });
       stats = merge(stats, clean);
       rv = mergeRv(rv, cleanV);
+      fm = mergeFm(fm, cleanF);
       syncRv();
       saveLocal(); schedulePush();
       msg.style.color = "var(--accent)";
@@ -884,11 +1066,12 @@
     const now = Date.now();
     if (resetTarget) {
       resets[resetTarget] = now;
-      subjById[resetTarget].questions.forEach(q => { delete stats[q.id]; delete rv[q.id]; });
-    } else { stats = {}; rv = {}; resetAt = now; }
+      subjById[resetTarget].questions.forEach(q => { delete stats[q.id]; delete rv[q.id]; delete fm[q.id]; });
+    } else { stats = {}; rv = {}; fm = {}; resetAt = now; }
     saveLocal(); push();
     modal.classList.remove("show"); route();
   };
 
+  if (/[?&]debug\b/.test(location.search)) window.__hk = { variantOf, kindsOf, hotLevel, targetForms, ALL, drillItems };
   route();
 })();

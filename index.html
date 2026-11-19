@@ -305,6 +305,30 @@
   .btn.wide { width: 100%; margin-bottom: 10px; }
   .grad { margin: 10px 0 0; font-weight: 700; color: var(--accent); }
 
+  /* ---- 頻出テーマ・理解度 ---- */
+  .tag-hot { display: inline-block; font-size: 11px; font-weight: 700; color: #9A3412; background: #FFEDD5; border-radius: 999px; padding: 1px 8px; margin-left: 6px; vertical-align: 1px; }
+  .theme .tag-hot { margin: 0 6px 0 0; }
+  .themes { display: flex; flex-direction: column; gap: 10px; margin-bottom: 22px; }
+  .theme { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; text-align: left; display: flex; flex-direction: column; gap: 2px; }
+  @media (hover: hover) { .theme:hover { border-color: var(--accent); } }
+  .theme .tn { font-weight: 700; font-size: 14.5px; line-height: 1.45; }
+  .theme .tm { font-size: 12px; color: var(--sub); }
+  .theme .tm b { color: #9A3412; }
+  .theme .tr { font-size: 11px; color: #A79F95; line-height: 1.4; }
+  .theme .tu { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; margin-top: 4px; }
+  .theme .tu .bar { margin-top: 0; }
+  .theme .tu small { font-size: 11px; color: var(--sub); }
+  .jsrc { display: block; font-size: 11px; color: var(--sub); margin-top: 2px; }
+  .jrow.col .jc.col { flex-direction: column; margin-top: 8px; }
+  .jrow.col .jb { text-align: left; font-weight: 500; font-size: 14px; width: 100%; }
+  .understand { margin-top: 10px; background: #fff; border-radius: 10px; padding: 9px 12px; font-size: 13px; }
+  .understand .uh { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .understand .uh span { font-weight: 700; }
+  .understand .uh b { color: var(--sun); font-size: 16px; letter-spacing: 1px; }
+  .understand .uh small { color: var(--sub); font-size: 11.5px; }
+  .understand .um { color: var(--ink); margin-top: 2px; }
+  .understand .uth { color: #9A3412; font-size: 12px; margin-top: 4px; }
+
   @media (max-width: 420px) { .subjects { grid-template-columns: 1fr 1fr; } .subj { min-height: 112px; padding: 12px; } .subj .name { font-size: 14.5px; } }
 
   @media (max-width: 420px) {

@@ -4,7 +4,7 @@
   問題は specs → specs_more の順で「末尾に追加」のみとし、途中への挿入・削除・並べ替えはしない。
 - META に base があれば、そのJSON（既存の問題）を先頭に置く（教育原理）。
 """
-import importlib.util, json, random, itertools, glob, os, pathlib
+import importlib.util, json, random, itertools, glob, os, pathlib, re
 from collections import Counter
 
 ROOT = pathlib.Path(__file__).resolve().parent
@@ -106,6 +106,19 @@ def build(path):
         for c in cats_out:
             if notes.get(c["id"]): c["note"] = list(notes[c["id"]])
     subj = dict(id=meta["id"], name=meta["name"], icon=meta["icon"], examCount=meta["examCount"], categories=cats_out, questions=qs)
+    themes_file = ROOT / "themes" / path.name  # 頻出テーマ（キーワードで問題を割り当てる）
+    if themes_file.exists():
+        out = []
+        for tid, tname, pat, rank, cnt, refs in load(themes_file).THEMES:
+            rx = re.compile(pat)
+            def text(q):
+                parts = [q["q"]] + q.get("items", []) + q.get("pool", [])  # 解説は含めない（主題で判定）
+                if q.get("type") != "combo": parts += q["o"]
+                else: parts += ["".join(o) for o in q["o"]]
+                return "\n".join(parts)
+            ids = [q["id"] for q in qs if rx.search(text(q))]
+            out.append(dict(id=tid, name=tname, rank=rank, exam=cnt, refs=refs, qs=ids))
+        subj["themes"] = out
     (OUT / f"{meta['id']}.js").write_text("registerSubject(" + json.dumps(subj, ensure_ascii=False, separators=(",", ":")) + ");\n")
     kinds = Counter("一問一答" if not (q.get("type") or q.get("fixed")) else {"combo": "組合せ", "multi": "複数選択"}.get(q.get("type"), "5択") for q in qs)
     print(f"{meta['name']:<9} 計{len(qs):>4}  {dict(kinds)}")
