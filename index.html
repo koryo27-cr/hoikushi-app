@@ -1,0 +1,2298 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#FAF6EE">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="教育原理">
+<meta name="format-detection" content="telephone=no">
+<link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAIAAACyr5FlAAADFklEQVR42u3dvW1UQRSG4WNEG0DmFEhITUIPyLRABYYQOqAFJHogISbBpGSYRkjRXgT22nfmzDnPG/KTrB/N2veblU/OLs5D+lv3vASCQ3AIDsEhOASH4BAcgkNwSHAIDsEhOASH4BAcgkNwCA4JDsGh47vvJZjep8dX2z98+f0hHEz8528nKvG2klHGcf/SydGIxcF/GX+EODmyy5h4hMCxhowpPuAQHOsfG+MPDzhWkjHYBxyCQ3CUf08Z+c4Ch+AQHIJDcAgOwdG0Pab2MfM9HIJDcHR4Zxl2JQyOxXyMvCwIh+AocXgMvmMMxzI+xt8+99GEOT5utLnP+lyTkyP7ETLxE29Ojvk+fFZWGc8GbyuCQ3AIDsEhOASH4BAct+zz2w9e3wF9ef8xVnxCuvXx4t1rX86cFOY/PsclLYWM28oBl+ZW5mrIPry1OlpSUVhylS3DJTmFIpP9ElyWo1D2Psd0LgUoNLrss/f3uSU1NL0JdsujpQMF1wSvxaUnhbCtCA7BITgEh+AQHIJDcOzTt18/fQ3+0dcfl9H5CenWx9MHj1AIj887c8lGYdVtpQCX/BTS4dh+ja/5XUhyLkdTeHb6BI5SXGpQWPJtJRuXqhSK3Oc4msvIlqNQ9rLPdC4FKDS6CbYrl5IUovPj87v6/rSJDNuK4BAcssqGKc4qi4IfZa2y4TmHVTY8BAurrFUWF6ssLlbZsJuEKc4qi4JV1iobHp9bZeEQHIJDcIRVNqyyZjarLC5WWVysslZZU5xVFgWrrFXWtmKVhcMqC4dVNjwhtcrCITgEh+CQ4BAcgkNwCA5Fn8fnB7/yeftLfnV0z9+8KrWtsJJfQ5bhjZWEGpKusn9aaQslA4jsk32fQyWbhvXuc1SyklzD8pd91rKyloZqN8GyWVlaQ/FrguOtVNLQ5Q7prj8EFQbRCMddHSpNNPTFcSMrPTUcdHJ2ce5VUFhlBYfgEByCQ3AIDsEhOASHBIfgEByCQ3AIDsEhOASH4JDgEByCQ3AIDsEhOASH4BAcgkOCQ3AIDsEhOASH4FCFfgOegFgyxH70zwAAAABJRU5ErkJggg==">
+<link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAIAAACyr5FlAAADFklEQVR42u3dvW1UQRSG4WNEG0DmFEhITUIPyLRABYYQOqAFJHogISbBpGSYRkjRXgT22nfmzDnPG/KTrB/N2veblU/OLs5D+lv3vASCQ3AIDsEhOASH4BAcgkNwSHAIDsEhOASH4BAcgkNwCA4JDsGh47vvJZjep8dX2z98+f0hHEz8528nKvG2klHGcf/SydGIxcF/GX+EODmyy5h4hMCxhowpPuAQHOsfG+MPDzhWkjHYBxyCQ3CUf08Z+c4Ch+AQHIJDcAgOwdG0Pab2MfM9HIJDcHR4Zxl2JQyOxXyMvCwIh+AocXgMvmMMxzI+xt8+99GEOT5utLnP+lyTkyP7ETLxE29Ojvk+fFZWGc8GbyuCQ3AIDsEhOASH4BAct+zz2w9e3wF9ef8xVnxCuvXx4t1rX86cFOY/PsclLYWM28oBl+ZW5mrIPry1OlpSUVhylS3DJTmFIpP9ElyWo1D2Psd0LgUoNLrss/f3uSU1NL0JdsujpQMF1wSvxaUnhbCtCA7BITgEh+AQHIJDcOzTt18/fQ3+0dcfl9H5CenWx9MHj1AIj887c8lGYdVtpQCX/BTS4dh+ja/5XUhyLkdTeHb6BI5SXGpQWPJtJRuXqhSK3Oc4msvIlqNQ9rLPdC4FKDS6CbYrl5IUovPj87v6/rSJDNuK4BAcssqGKc4qi4IfZa2y4TmHVTY8BAurrFUWF6ssLlbZsJuEKc4qi4JV1iobHp9bZeEQHIJDcIRVNqyyZjarLC5WWVysslZZU5xVFgWrrFXWtmKVhcMqC4dVNjwhtcrCITgEh+CQ4BAcgkNwCA5Fn8fnB7/yeftLfnV0z9+8KrWtsJJfQ5bhjZWEGpKusn9aaQslA4jsk32fQyWbhvXuc1SyklzD8pd91rKyloZqN8GyWVlaQ/FrguOtVNLQ5Q7prj8EFQbRCMddHSpNNPTFcSMrPTUcdHJ2ce5VUFhlBYfgEByCQ3AIDsEhOASHBIfgEByCQ3AIDsEhOASH4JDgEByCQ3AIDsEhOASH4BAcgkOCQ3AIDsEhOASH4FCFfgOegFgyxH70zwAAAABJRU5ErkJggg==">
+<title>保育士試験 教育原理 問題集</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FAF6EE;
+    --card: #FFFFFF;
+    --ink: #2D2A26;
+    --sub: #77706A;
+    --line: #E8E1D5;
+    --accent: #3F7A5A;
+    --accent-soft: #E3EFE7;
+    --wrong: #C0573F;
+    --wrong-soft: #F8E6E1;
+    --sun: #E7A93C;
+    --radius: 16px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  button, textarea { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+  button { -webkit-appearance: none; appearance: none; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Noto Sans JP", system-ui, sans-serif;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 680px; margin: 0 auto; padding: max(24px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(64px, calc(env(safe-area-inset-bottom) + 32px)) max(18px, env(safe-area-inset-left)); }
+  h1, h2, h3, .maru { font-family: "Zen Maru Gothic", "Noto Sans JP", sans-serif; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+
+  /* header */
+  .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+  .brand .badge {
+    font-size: 12px; font-weight: 700; color: var(--accent);
+    background: var(--accent-soft); border-radius: 999px; padding: 3px 10px;
+  }
+  h1 { font-size: 26px; margin: 6px 0 2px; letter-spacing: .02em; }
+  .lead { color: var(--sub); font-size: 14px; margin: 0 0 22px; }
+
+  /* overall */
+  .overall {
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 18px 20px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+    margin-bottom: 18px;
+  }
+  .stat { text-align: center; }
+  .stat .num { font-family: "Zen Maru Gothic", sans-serif; font-size: 26px; font-weight: 700; }
+  .stat .lbl { font-size: 12px; color: var(--sub); }
+
+  /* mode buttons */
+  .modes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 26px; }
+  .mode {
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 14px 16px; text-align: left; transition: transform .08s, border-color .15s;
+  }
+  @media (hover: hover) { .mode:hover { border-color: var(--accent); } }
+  .mode:active { transform: scale(.98); }
+  .mode .t { font-weight: 700; font-size: 15px; display: block; }
+  .mode .d { font-size: 12px; color: var(--sub); }
+  .mode.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .mode.primary .d { color: rgba(255,255,255,.8); }
+  .mode:disabled { opacity: .45; cursor: default; }
+
+  .section-title { font-size: 15px; font-weight: 700; margin: 0 0 10px; color: var(--sub); }
+
+  /* category list */
+  .cats { display: flex; flex-direction: column; gap: 10px; }
+  .cat {
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 14px 16px; display: grid; grid-template-columns: 34px 1fr auto; gap: 12px; align-items: center;
+    text-align: left; transition: border-color .15s;
+  }
+  @media (hover: hover) { .cat:hover { border-color: var(--accent); } }
+  .cat .ic { font-size: 22px; text-align: center; }
+  .cat .name { font-weight: 700; font-size: 15px; display: block; line-height: 1.4; }
+  .cat .meta { font-size: 12px; color: var(--sub); }
+  .bar { height: 6px; background: var(--line); border-radius: 99px; overflow: hidden; margin-top: 6px; }
+  .bar > i { display: block; height: 100%; background: var(--accent); border-radius: 99px; transition: width .3s; }
+  .cat .rate { font-family: "Zen Maru Gothic", sans-serif; font-weight: 700; font-size: 18px; min-width: 48px; text-align: right; }
+  .cat .rate small { font-size: 11px; color: var(--sub); font-weight: 500; }
+
+  .foot { margin-top: 28px; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; color: var(--sub); }
+  .foot .links { display: flex; gap: 6px; }
+  .link-btn { background: none; border: none; color: var(--sub); text-decoration: underline; padding: 10px 6px; font-size: 13px; }
+
+  /* quiz */
+  .topbar { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .back { min-height: 36px; background: none; border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; font-size: 13px; background: var(--card); }
+  .progress { flex: 1; height: 8px; background: var(--line); border-radius: 99px; overflow: hidden; }
+  .progress > i { display: block; height: 100%; background: var(--sun); transition: width .3s; }
+  .count { font-size: 13px; color: var(--sub); min-width: 48px; text-align: right; }
+
+  .qcard { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px 20px; }
+  .qcat { font-size: 12px; font-weight: 700; color: var(--accent); margin-bottom: 8px; }
+  .qtext { font-size: 17px; font-weight: 500; margin: 0 0 18px; }
+  .opts { display: flex; flex-direction: column; gap: 10px; }
+  .opt {
+    min-height: 52px;
+    display: grid; grid-template-columns: 30px 1fr 22px; gap: 10px; align-items: center;
+    text-align: left; background: #fff; border: 1.5px solid var(--line); border-radius: 12px;
+    padding: 12px 14px; font-size: 15px; transition: border-color .15s, background .15s;
+  }
+  @media (hover: hover) { .opt:hover:not(:disabled) { border-color: var(--accent); background: #FBFDFB; } }
+  .opt .k {
+    width: 28px; height: 28px; border-radius: 50%; border: 1.5px solid var(--line);
+    display: grid; place-items: center; font-size: 13px; font-weight: 700; color: var(--sub);
+  }
+  .opt .mk { font-weight: 700; text-align: center; }
+  .opt:disabled { cursor: default; }
+  .opt.correct { border-color: var(--accent); background: var(--accent-soft); }
+  .opt.correct .k { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .opt.correct .mk { color: var(--accent); }
+  .opt.wrong { border-color: var(--wrong); background: var(--wrong-soft); }
+  .opt.wrong .k { background: var(--wrong); border-color: var(--wrong); color: #fff; }
+  .opt.wrong .mk { color: var(--wrong); }
+  .opt.dim { opacity: .55; }
+
+  .explain { margin-top: 16px; border-radius: 12px; padding: 14px 16px; font-size: 14px; display: none; }
+  .explain.show { display: block; animation: rise .25s ease-out; }
+  .explain.ok { background: var(--accent-soft); }
+  .explain.ng { background: var(--wrong-soft); }
+  .explain .verdict { font-family: "Zen Maru Gothic", sans-serif; font-weight: 700; font-size: 16px; margin-bottom: 4px; }
+  .explain.ok .verdict { color: var(--accent); }
+  .explain.ng .verdict { color: var(--wrong); }
+  @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  .next {
+    margin-top: 16px; width: 100%; background: var(--ink); color: #fff; border: none; border-radius: 12px;
+    padding: 14px; font-weight: 700; font-size: 15px; display: none;
+  }
+  .next.show { display: block; }
+  .hint { font-size: 12px; color: var(--sub); text-align: center; margin-top: 10px; }
+
+  /* result */
+  .result-hero { text-align: center; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 28px 20px; margin-bottom: 18px; }
+  .ring { width: 140px; height: 140px; margin: 0 auto 10px; position: relative; }
+  .ring svg { transform: rotate(-90deg); }
+  .ring .val { position: absolute; inset: 0; display: grid; place-items: center; font-family: "Zen Maru Gothic", sans-serif; }
+  .ring .val b { font-size: 34px; display: block; line-height: 1; }
+  .ring .val span { font-size: 12px; color: var(--sub); }
+  .msg { font-family: "Zen Maru Gothic", sans-serif; font-size: 18px; font-weight: 700; margin: 6px 0 2px; }
+  .submsg { font-size: 13px; color: var(--sub); margin: 0; }
+  .missed { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+  .missed-item { background: var(--card); border: 1px solid var(--line); border-left: 4px solid var(--wrong); border-radius: 12px; padding: 12px 14px; font-size: 14px; }
+  .missed-item .ans { color: var(--accent); font-weight: 700; margin-top: 4px; }
+  .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .btn { border-radius: 12px; padding: 13px; font-weight: 700; border: 1px solid var(--line); background: var(--card); }
+  .btn.dark { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+  /* dialog */
+  .modal { position: fixed; inset: 0; background: rgba(45,42,38,.4); display: none; place-items: center; padding: max(20px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-bottom)); overflow-y: auto; -webkit-overflow-scrolling: touch; z-index: 10; }
+  .modal.show { display: grid; }
+  .modal .box { max-height: 100%; overflow-y: auto; background: #fff; border-radius: var(--radius); padding: 22px; max-width: 360px; width: 100%; }
+  .modal p { margin: 0 0 16px; }
+
+
+  /* exam-style */
+  .qtext { white-space: pre-line; }
+  .stmts { background: #FBF8F2; border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin: 0 0 12px; font-size: 14.5px; }
+  .stmts div + div { margin-top: 8px; }
+  .stmts.pool { background: #F4F8F5; }
+  .tag-exam { display: inline-block; font-size: 11px; font-weight: 700; color: #8A5A12; background: #FBEFD9; border-radius: 999px; padding: 1px 8px; margin-left: 6px; vertical-align: 1px; }
+  .combo-head, .opt.combo { display: grid; grid-template-columns: 30px repeat(var(--n), 1fr) 22px; gap: 8px; align-items: center; }
+  .combo-head { font-size: 12px; font-weight: 700; color: var(--sub); padding: 0 15px 2px; text-align: center; }
+  .opt.combo .v { text-align: center; font-size: 14px; }
+  .opt.combo.marks .v { font-size: 18px; font-weight: 700; }
+  .sync { display: inline-flex; align-items: center; gap: 6px; }
+  .sync i { width: 8px; height: 8px; border-radius: 50%; background: #C9C1B4; display: inline-block; }
+  .sync.on i { background: var(--accent); }
+  .sync.err i { background: var(--wrong); }
+
+  textarea { font-size: 16px; }
+  @media (hover: none) { .hint { display: none; } }
+  .install { display: none; margin-top: 14px; background: var(--card); border: 1px dashed var(--line); border-radius: 12px; padding: 12px 14px; font-size: 13px; color: var(--sub); }
+  .install.show { display: block; }
+  @media (max-width: 420px) {
+    h1 { font-size: 22px; }
+    .qtext { font-size: 16px; }
+    .modes { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+
+<div class="modal" id="modal">
+  <div class="box">
+    <p>学習記録をすべてリセットしますか？<br><small style="color:var(--sub)">この操作は取り消せません。</small></p>
+    <div class="actions">
+      <button class="btn" id="modal-cancel">やめる</button>
+      <button class="btn dark" id="modal-ok" style="background:var(--wrong);border-color:var(--wrong)">リセット</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="xfer">
+  <div class="box" style="max-width:420px">
+    <h3 class="maru" style="margin:0 0 6px;font-size:18px">記録の引き継ぎ</h3>
+    <p style="font-size:13px;color:var(--sub);margin:0 0 12px">ログインしていなくても、コードを使って別の端末やブラウザへ学習記録を移せます。</p>
+    <div style="font-size:13px;font-weight:700;margin-bottom:4px">① この端末の記録を書き出す</div>
+    <textarea id="xfer-out" readonly style="width:100%;height:64px;font-size:16px;font-family:monospace;border:1px solid var(--line);border-radius:10px;padding:8px;resize:none"></textarea>
+    <button class="btn dark" id="xfer-copy" style="width:100%;margin:6px 0 14px">コードをコピー</button>
+    <div style="font-size:13px;font-weight:700;margin-bottom:4px">② 別の端末で読み込む</div>
+    <textarea id="xfer-in" placeholder="ここにコードを貼り付け" style="width:100%;height:64px;font-size:16px;font-family:monospace;border:1px solid var(--line);border-radius:10px;padding:8px;resize:none"></textarea>
+    <p id="xfer-msg" style="font-size:13px;margin:4px 0 8px;min-height:1.2em"></p>
+    <div class="actions">
+      <button class="btn" id="xfer-close">閉じる</button>
+      <button class="btn dark" id="xfer-load" style="background:var(--accent);border-color:var(--accent)">読み込む</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const CATEGORIES = [
+  { id: "law", name: "教育の意義と法規", icon: "⚖️" },
+  { id: "west", name: "西洋の教育思想", icon: "🌍" },
+  { id: "japan", name: "日本の教育の歴史・思想", icon: "🏯" },
+  { id: "method", name: "教育方法・評価", icon: "📝" },
+  { id: "modern", name: "現代の教育課題", icon: "🌱" }
+];
+
+const QUESTIONS = [
+  // ===== 教育の意義と法規 =====
+  { id: "law01", c: "law", q: "教育基本法第1条で、教育が「目指す」ものとして掲げられているのはどれか。",
+    o: ["人格の完成", "個性の伸長", "国家の発展", "職業能力の育成"], a: 0,
+    e: "第1条（教育の目的）は「教育は、人格の完成を目指し、平和で民主的な国家及び社会の形成者として必要な資質を備えた心身ともに健康な国民の育成を期して行われなければならない」と定めています。" },
+  { id: "law02", c: "law", q: "現行の教育基本法は何年に全部改正されたか。",
+    o: ["2006年（平成18年）", "1947年（昭和22年）", "1989年（平成元年）", "2016年（平成28年）"], a: 0,
+    e: "教育基本法は1947年に制定され、2006年に約60年ぶりに全部改正されました。家庭教育・幼児期の教育・生涯学習の理念などの条文がこのとき新設されています。" },
+  { id: "law03", c: "law", q: "教育基本法第10条（家庭教育）で、子の教育について「第一義的責任」を有するとされているのは誰か。",
+    o: ["父母その他の保護者", "国及び地方公共団体", "学校", "地域住民"], a: 0,
+    e: "第10条は「父母その他の保護者は、子の教育について第一義的責任を有する」と定め、国・地方公共団体には家庭教育を支援する施策に努めることを求めています。" },
+  { id: "law04", c: "law", q: "教育基本法第11条では、幼児期の教育を「生涯にわたる（　）の基礎を培う重要なもの」としている。（　）に入る語句はどれか。",
+    o: ["人格形成", "学力形成", "社会性", "生活習慣"], a: 0,
+    e: "第11条（幼児期の教育）は、幼児期の教育が生涯にわたる人格形成の基礎を培う重要なものであるとし、国・地方公共団体に良好な環境の整備などによる振興を求めています。" },
+  { id: "law05", c: "law", q: "学校教育法第1条に定める「学校」に含まれないものはどれか。",
+    o: ["保育所", "幼稚園", "義務教育学校", "高等専門学校"], a: 0,
+    e: "第1条の学校（いわゆる一条校）は、幼稚園・小学校・中学校・義務教育学校・高等学校・中等教育学校・特別支援学校・大学・高等専門学校です。保育所は児童福祉法に基づく児童福祉施設です。" },
+  { id: "law06", c: "law", q: "学校教育法第22条では、幼稚園は「（　）及びその後の教育の基礎を培うもの」とされている。（　）に入る語句はどれか。",
+    o: ["義務教育", "生涯学習", "小学校教育", "家庭教育"], a: 0,
+    e: "第22条は、幼稚園は義務教育及びその後の教育の基礎を培うものとして、幼児を保育し、適当な環境を与えて心身の発達を助長することを目的とすると定めています。" },
+  { id: "law07", c: "law", q: "「教育を受ける権利」と「義務教育の無償」を定めている日本国憲法の条文はどれか。",
+    o: ["第26条", "第13条", "第25条", "第89条"], a: 0,
+    e: "第26条は、能力に応じてひとしく教育を受ける権利と、保護する子女に普通教育を受けさせる義務、義務教育の無償を定めています。第25条は生存権、第13条は個人の尊重・幸福追求権です。" },
+  { id: "law08", c: "law", q: "学校教育法第11条によれば、校長及び教員は児童生徒等に懲戒を加えることができるが、（　）を加えることはできない。",
+    o: ["体罰", "訓告", "停学", "叱責"], a: 0,
+    e: "学校教育法第11条は懲戒を認めつつ、ただし書で「体罰を加えることはできない」と明確に禁止しています。" },
+  { id: "law09", c: "law", q: "「児童の権利に関する条約」の国連での採択年と、日本の批准年の組合せとして正しいものはどれか。",
+    o: ["1989年採択・1994年批准", "1959年採択・1979年批准", "1989年採択・1990年批准", "1994年採択・2006年批准"], a: 0,
+    e: "児童の権利に関する条約は1989年に国連総会で採択され、日本は1994年に批准しました。1959年は「児童権利宣言」の採択年です。" },
+  { id: "law10", c: "law", q: "児童の権利に関する条約第12条で保障されている、子どもが自分に影響を及ぼす事項について自由に意見を表す権利を何というか。",
+    o: ["意見表明権", "生存権", "教育を受ける権利", "休息・余暇の権利"], a: 0,
+    e: "第12条の意見表明権は、子どもを「保護の対象」だけでなく「権利の主体」として捉える条約の特徴をよく表す規定です。意見はその年齢・成熟度に従って相応に考慮されます。" },
+  { id: "law11", c: "law", q: "「国民一人一人が、自己の人格を磨き、豊かな人生を送ることができるよう、その生涯にわたって、あらゆる機会に、あらゆる場所において学習することができ…」と定める教育基本法の規定はどれか。",
+    o: ["生涯学習の理念（第3条）", "教育の機会均等（第4条）", "義務教育（第5条）", "社会教育（第12条）"], a: 0,
+    e: "第3条「生涯学習の理念」は2006年改正で新設された条文です。学習の成果を適切に生かすことのできる社会の実現を図ることも定めています。" },
+  { id: "law12", c: "law", q: "2006年の教育基本法改正で削除された規定はどれか。",
+    o: ["男女共学", "教育の機会均等", "義務教育", "政治教育"], a: 0,
+    e: "旧法第5条の「男女共学」は、男女共学が定着したことなどを理由に改正時に削除されました。逆に家庭教育、幼児期の教育、学校・家庭・地域住民等の連携協力などが新設されています。" },
+
+  // ===== 西洋の教育思想 =====
+  { id: "west01", c: "west", q: "『大教授学』で「あらゆる人に、あらゆる事柄を教授する」ことを説き、世界初の絵入り教科書『世界図絵』を著したのは誰か。",
+    o: ["コメニウス", "ルソー", "ロック", "ヘルバルト"], a: 0,
+    e: "17世紀チェコの教育思想家コメニウスは「近代教授学の祖」と呼ばれます。『世界図絵』は感覚（直観）を通じて学ぶことを重視した絵入りの教科書です。" },
+  { id: "west02", c: "west", q: "ルソーが『エミール』で説いた、大人が知識や道徳を早くから教え込まず、子どもの自然な成長を妨げないようにする教育を何というか。",
+    o: ["消極教育", "直観教授", "開発教授", "注入教育"], a: 0,
+    e: "ルソーは子どもを「小さな大人」ではなく固有の時期を生きる存在と捉え、「子どもの発見者」と呼ばれます。その教育論の中心が消極教育です。" },
+  { id: "west03", c: "west", q: "『隠者の夕暮』を著し、シュタンツの孤児院などで実践を行い、「生活が陶冶する」の言葉や直観教授で知られるのは誰か。",
+    o: ["ペスタロッチ", "フレーベル", "オーエン", "デューイ"], a: 0,
+    e: "スイスのペスタロッチは、頭（知）・心（徳）・手（技）の調和的な発達を目指し、直観を出発点とする教授法を体系化しました。主著に『ゲルトルート児童教育法』もあります。" },
+  { id: "west04", c: "west", q: "1840年に世界で最初の幼稚園を創設し、「恩物」と呼ばれる遊具を考案したのは誰か。",
+    o: ["フレーベル", "モンテッソーリ", "ペスタロッチ", "シュタイナー"], a: 0,
+    e: "ドイツのフレーベルは遊びを幼児の最も重要な活動と考え、Kindergarten（子どもたちの庭）を創設しました。主著は『人間の教育』です。" },
+  { id: "west05", c: "west", q: "イギリス・ニューラナークの工場内に「性格形成学院」を設け、その中に幼児学校を開いたのは誰か。",
+    o: ["オーエン", "ロック", "ベル", "ニイル"], a: 0,
+    e: "オーエンは環境が人間の性格を形成すると考え、1816年に性格形成学院を設立しました。その幼児学校は、イギリスにおける幼児教育の先駆けとされます。" },
+  { id: "west06", c: "west", q: "シカゴ大学附属実験学校（デューイ・スクール）を開き、『学校と社会』で子ども中心の教育を説いた経験主義の教育思想家は誰か。",
+    o: ["デューイ", "キルパトリック", "ブルーナー", "パーカースト"], a: 0,
+    e: "デューイは「なすことによって学ぶ（learning by doing）」に象徴される経験主義・問題解決学習を唱えました。主著に『民主主義と教育』もあります。" },
+  { id: "west07", c: "west", q: "1907年にローマのスラム街に「子どもの家」を開き、敏感期の考え方や独自の教具を用いた教育法で知られるのは誰か。",
+    o: ["モンテッソーリ", "エレン・ケイ", "フレーベル", "シュタイナー"], a: 0,
+    e: "イタリア初の女性医学博士の一人であるモンテッソーリは、子どもの自己教育力を重視し、整えられた環境と感覚教具による教育法を確立しました。" },
+  { id: "west08", c: "west", q: "1900年に『児童の世紀』を著し、20世紀は子どもの世紀になるべきだと説いたスウェーデンの思想家は誰か。",
+    o: ["エレン・ケイ", "モンテッソーリ", "ルソー", "オーエン"], a: 0,
+    e: "エレン・ケイの『児童の世紀』は、子どもの権利や個性を尊重する新教育運動に大きな影響を与えました。" },
+  { id: "west09", c: "west", q: "『教育に関する考察』を著し、人間の心は生まれたときは白紙（タブラ・ラサ）であり、経験によって観念が形成されると考えたのは誰か。",
+    o: ["ロック", "ルソー", "コメニウス", "ヘルバルト"], a: 0,
+    e: "イギリスの哲学者ロックは経験論の立場から、習慣形成と身体の鍛錬を重視した紳士教育論を展開しました。" },
+  { id: "west10", c: "west", q: "教育の目的を倫理学に、方法を心理学に求めて教育学を体系化し、「明瞭・連合・系統・方法」の四段階教授法を唱えたのは誰か。",
+    o: ["ヘルバルト", "ライン", "デューイ", "ペスタロッチ"], a: 0,
+    e: "ヘルバルトは『一般教育学』を著し、科学としての教育学の祖とされます。その四段階は弟子たちによって五段階に発展しました。" },
+  { id: "west11", c: "west", q: "ヘルバルト学派のラインが提唱した五段階教授法として正しいものはどれか。",
+    o: ["予備・提示・比較・総括・応用", "明瞭・連合・系統・方法・応用", "目的・計画・遂行・判断・応用", "導入・展開・発見・検証・まとめ"], a: 0,
+    e: "ラインの五段階教授法は明治期の日本にも導入され、一斉授業の型として広く普及しました。「目的・計画・遂行・判断」はキルパトリックのプロジェクト・メソッドの段階です。" },
+  { id: "west12", c: "west", q: "人智学に基づき、1919年にドイツで自由ヴァルドルフ学校を創設したのは誰か。",
+    o: ["シュタイナー", "ペーターゼン", "ニイル", "フレーベル"], a: 0,
+    e: "シュタイナー教育は、7年周期の発達観、オイリュトミー（身体芸術）、エポック授業などで知られます。" },
+  { id: "west13", c: "west", q: "イギリスに「サマーヒル・スクール」を創設し、子どもの自由と自治を徹底した教育を行ったのは誰か。",
+    o: ["ニイル", "オーエン", "ロック", "ベル"], a: 0,
+    e: "ニイルは1921年にサマーヒル・スクールを開き、授業への出席も子ども自身が決める自由な学校として知られます。" },
+  { id: "west14", c: "west", q: "『脱学校の社会』を著し、制度化された学校が人々の学ぶ力を奪っていると批判したのは誰か。",
+    o: ["イリッチ", "フレイレ", "ラングラン", "ハッチンス"], a: 0,
+    e: "イリッチは学校化された社会を批判し、学習のネットワーク（学びの網）による学習のあり方を提唱しました。" },
+  { id: "west15", c: "west", q: "教師が知識を一方的に預け入れる教育を「銀行型教育」と批判し、対話による「問題提起型教育」を唱えたのは誰か。",
+    o: ["フレイレ", "イリッチ", "デューイ", "ブルーナー"], a: 0,
+    e: "ブラジルのフレイレは識字教育の実践を通じて『被抑圧者の教育学』を著し、対話を通じた意識化（conscientização）を重視しました。" },
+  { id: "west16", c: "west", q: "子どもが一人でできる水準と、大人や仲間の援助があればできる水準との間の領域を「発達の最近接領域」と呼んだのは誰か。",
+    o: ["ヴィゴツキー", "ピアジェ", "ブルーナー", "エリクソン"], a: 0,
+    e: "旧ソ連の心理学者ヴィゴツキーは、教育はこの領域に働きかけることで発達を先導すると考えました。" },
+
+  // ===== 日本の教育の歴史・思想 =====
+  { id: "jp01", c: "japan", q: "日本で最初の体系的な児童教育書とされる『和俗童子訓』を著し、年齢に応じた教育（随年教法）を説いたのは誰か。",
+    o: ["貝原益軒", "中江藤樹", "石田梅岩", "広瀬淡窓"], a: 0,
+    e: "江戸時代の儒学者・貝原益軒は、早期からの教育と、年齢に応じた段階的な教育の必要性を説きました。" },
+  { id: "jp02", c: "japan", q: "「近江聖人」と呼ばれ、陽明学を広めて藤樹書院を開いた江戸時代の儒学者は誰か。",
+    o: ["中江藤樹", "貝原益軒", "吉田松陰", "緒方洪庵"], a: 0,
+    e: "中江藤樹は「孝」を中心とした道徳を説き、身分を問わず人々を教えました。主著に『翁問答』があります。" },
+  { id: "jp03", c: "japan", q: "豊後日田に私塾「咸宜園」を開き、入門時に年齢・学歴・身分を問わない「三奪法」を採用したのは誰か。",
+    o: ["広瀬淡窓", "緒方洪庵", "吉田松陰", "中江藤樹"], a: 0,
+    e: "広瀬淡窓の咸宜園では、毎月の成績評価（月旦評）によって等級を決める実力主義がとられ、全国から多くの門人が集まりました。" },
+  { id: "jp04", c: "japan", q: "大坂に蘭学塾「適塾（適々斎塾）」を開き、福沢諭吉らを育てたのは誰か。",
+    o: ["緒方洪庵", "吉田松陰", "広瀬淡窓", "シーボルト"], a: 0,
+    e: "緒方洪庵は医師・蘭学者で、適塾からは福沢諭吉、大村益次郎、橋本左内など多くの人材が輩出されました。" },
+  { id: "jp05", c: "japan", q: "「邑に不学の戸なく、家に不学の人なからしめん事を期す」という国民皆学の理念が示されたものはどれか。",
+    o: ["学制（1872年）", "教育令（1879年）", "学校令（1886年）", "教育勅語（1890年）"], a: 0,
+    e: "1872（明治5）年の学制に先立って出された「学事奨励に関する被仰出書（学制序文）」に示された理念です。学制は日本の近代学校制度の出発点です。" },
+  { id: "jp06", c: "japan", q: "初代文部大臣として、小学校令・中学校令・帝国大学令・師範学校令からなる「学校令」を制定したのは誰か。",
+    o: ["森有礼", "福沢諭吉", "井上毅", "沢柳政太郎"], a: 0,
+    e: "森有礼は1885年に初代文部大臣となり、1886年に学校令を公布して、近代的な学校体系の基礎を固めました。" },
+  { id: "jp07", c: "japan", q: "「教育ニ関スル勅語（教育勅語）」が発布された年はどれか。",
+    o: ["1890年（明治23年）", "1872年（明治5年）", "1886年（明治19年）", "1947年（昭和22年）"], a: 0,
+    e: "教育勅語は1890年に発布され、戦前の日本の教育理念の根幹とされました。戦後、1948年に国会で排除・失効が決議されています。" },
+  { id: "jp08", c: "japan", q: "1876（明治9）年に開設された、日本で最初の官立幼稚園はどれか。",
+    o: ["東京女子師範学校附属幼稚園", "二葉幼稚園", "成城幼稚園", "新潟静修学校附設託児所"], a: 0,
+    e: "東京女子師範学校附属幼稚園（現・お茶の水女子大学附属幼稚園）では、フレーベルの恩物を中心とした保育が行われました。" },
+  { id: "jp09", c: "japan", q: "東京女子師範学校附属幼稚園で主任保姆を務め、ドイツでフレーベル主義の保育を学んでいた人物は誰か。",
+    o: ["松野クララ", "豊田芙雄", "野口幽香", "モンテッソーリ"], a: 0,
+    e: "松野クララはドイツ出身で、フレーベルの養成学校で学んだ経歴を持ちます。監事の関信三、保姆の豊田芙雄らとともに初期の保育を担いました。" },
+  { id: "jp10", c: "japan", q: "1890年、新潟静修学校に付設して乳幼児を預かる施設を開き、日本の保育所の起源の一つとされるのは誰か。",
+    o: ["赤沢鍾美・仲子夫妻", "野口幽香・森島峰", "石井十次", "倉橋惣三"], a: 0,
+    e: "赤沢鍾美・仲子夫妻は、学校に通う子どもが連れてくる幼い弟妹を預かったことから託児を始め、のちに「守孤扶独幼稚児保護会」と称しました。" },
+  { id: "jp11", c: "japan", q: "1900年、東京に貧しい家庭の子どものための「二葉幼稚園」を開設したのは誰か。",
+    o: ["野口幽香・森島峰", "赤沢鍾美・仲子夫妻", "羽仁もと子", "松野クララ"], a: 0,
+    e: "二葉幼稚園はのちに「二葉保育園」と改称され、貧困家庭の子どもへの保育実践の先駆けとなりました。" },
+  { id: "jp12", c: "japan", q: "『幼稚園真諦』を著し、「生活を、生活で、生活へ」という言葉に象徴される誘導保育論を唱えたのは誰か。",
+    o: ["倉橋惣三", "城戸幡太郎", "及川平治", "沢柳政太郎"], a: 0,
+    e: "倉橋惣三は東京女子高等師範学校附属幼稚園の主事を務め、子どもの自発的な生活を尊重する児童中心の保育を提唱しました。「日本のフレーベル」とも呼ばれます。" },
+  { id: "jp13", c: "japan", q: "1936年に保育問題研究会を組織し、社会中心主義の立場から保育を研究したのは誰か。",
+    o: ["城戸幡太郎", "倉橋惣三", "羽仁もと子", "鈴木三重吉"], a: 0,
+    e: "城戸幡太郎は、倉橋の児童中心主義に対して、社会生活に必要な協同性の育成を重視しました。保育者と研究者が共同で研究を進めた点も特徴です。" },
+  { id: "jp14", c: "japan", q: "大正自由教育の時期、1917年に成城小学校を創設したのは誰か。",
+    o: ["沢柳政太郎", "羽仁もと子", "及川平治", "木下竹次"], a: 0,
+    e: "沢柳政太郎は個性尊重・自然と親しむ教育などを掲げて成城小学校を開き、大正新教育運動の中心となりました。" },
+  { id: "jp15", c: "japan", q: "1921年に「自由学園」を創設したのは誰か。",
+    o: ["羽仁もと子", "沢柳政太郎", "野口幽香", "津田梅子"], a: 0,
+    e: "羽仁もと子は夫の羽仁吉一とともに自由学園を創設し、「生活即教育」を掲げました。雑誌『婦人之友』の創刊者でもあります。" },
+  { id: "jp16", c: "japan", q: "明石女子師範学校附属小学校で「分団式動的教育法」を実践したのは誰か。",
+    o: ["及川平治", "木下竹次", "沢柳政太郎", "芦田恵之助"], a: 0,
+    e: "及川平治は一斉授業の画一性を批判し、子どもの能力や進度に応じて学級を小集団（分団）に分けて指導する方法を実践しました。" },
+  { id: "jp17", c: "japan", q: "1918年に児童雑誌『赤い鳥』を創刊し、童話・童謡運動を起こしたのは誰か。",
+    o: ["鈴木三重吉", "北原白秋", "小川未明", "倉橋惣三"], a: 0,
+    e: "鈴木三重吉の『赤い鳥』には芥川龍之介、北原白秋らが寄稿し、子どものための芸術的な文学の発展と、児童の綴方（作文）教育にも影響を与えました。" },
+
+  // ===== 教育方法・評価 =====
+  { id: "met01", c: "method", q: "「目的設定・計画・遂行・判断（評価）」の4段階で子どもが主体的に活動を進める「プロジェクト・メソッド」を提唱したのは誰か。",
+    o: ["キルパトリック", "デューイ", "パーカースト", "ウォッシュバーン"], a: 0,
+    e: "デューイの弟子キルパトリックは、子ども自身が目的をもって取り組む活動（プロジェクト）を学習の単位としました。" },
+  { id: "met02", c: "method", q: "「自由」と「協同」を原理とし、学習者が教師と学習の割り当て（アサインメント）を契約して、教科ごとの実験室で自分のペースで学ぶ方式はどれか。",
+    o: ["ドルトン・プラン", "ウィネトカ・プラン", "イエナ・プラン", "モニトリアル・システム"], a: 0,
+    e: "ドルトン・プランはアメリカのパーカーストがマサチューセッツ州ドルトンで実践した個別化学習の方式です。" },
+  { id: "met03", c: "method", q: "基礎的な教科は個別の進度で学び、創造的・集団的な活動は集団で行うことを組み合わせた「ウィネトカ・プラン」を考案したのは誰か。",
+    o: ["ウォッシュバーン", "パーカースト", "ペーターゼン", "キルパトリック"], a: 0,
+    e: "ウォッシュバーンはイリノイ州ウィネトカの教育長として、個別学習と集団活動を組み合わせた方式を実施しました。" },
+  { id: "met04", c: "method", q: "学年制を廃し、異年齢の子どもで構成される「根幹グループ」を基本とする「イエナ・プラン」を提唱したのは誰か。",
+    o: ["ペーターゼン", "シュタイナー", "ウォッシュバーン", "ヘルバルト"], a: 0,
+    e: "ドイツのペーターゼンがイエナ大学附属学校で始めた方式で、現在はオランダで広く実践されています。会話・遊び・仕事・催しの4つの基本活動が特徴です。" },
+  { id: "met05", c: "method", q: "『教育の過程』を著し、学問の構造を学習者自身が発見していく「発見学習」を提唱したのは誰か。",
+    o: ["ブルーナー", "ブルーム", "オーズベル", "スキナー"], a: 0,
+    e: "ブルーナーはウッズホール会議の議長として『教育の過程』をまとめ、教育内容の現代化に大きな影響を与えました。どの教科もその本質を保ったまま、発達のどの段階の子どもにも教えうるという仮説も有名です。" },
+  { id: "met06", c: "method", q: "ほとんどすべての学習者が、適切な時間と指導があれば学習内容を習得できるとする「完全習得学習（マスタリー・ラーニング）」を提唱したのは誰か。",
+    o: ["ブルーム", "ブルーナー", "キャロル", "スキナー"], a: 0,
+    e: "ブルームはキャロルの学校学習モデルを基に完全習得学習を提唱し、そのために診断的・形成的・総括的評価を活用することを説きました。" },
+  { id: "met07", c: "method", q: "単元や授業の途中で学習者の到達状況を確かめ、その結果を指導の改善に生かす評価を何というか。",
+    o: ["形成的評価", "診断的評価", "総括的評価", "相対評価"], a: 0,
+    e: "ブルームの分類では、学習前に実態を把握するのが診断的評価、学習の途中で行うのが形成的評価、単元や学期の終わりに成果を判定するのが総括的評価です。" },
+  { id: "met08", c: "method", q: "集団の中での位置（順位）によって個人の成績を判定する評価方法はどれか。",
+    o: ["相対評価", "目標に準拠した評価", "個人内評価", "形成的評価"], a: 0,
+    e: "相対評価は客観性がある一方、集団内で必ず低い評価がつくなどの問題があります。日本の指導要録は2001（平成13）年の改訂から目標に準拠した評価（いわゆる絶対評価）に改められました。" },
+  { id: "met09", c: "method", q: "学習の過程で生まれた作品・記録・振り返りなどを継続的にファイルなどに集積し、それをもとに学びを評価する方法はどれか。",
+    o: ["ポートフォリオ評価", "ルーブリック", "ペーパーテスト", "相対評価"], a: 0,
+    e: "ポートフォリオ評価は、学習者自身の振り返り（自己評価）を促す点でも重視されています。保育におけるドキュメンテーションとも通じる考え方です。" },
+  { id: "met10", c: "method", q: "評価の観点（規準）と、それぞれの達成段階（尺度）を表の形で示した評価基準表を何というか。",
+    o: ["ルーブリック", "ポートフォリオ", "シラバス", "チェックリスト"], a: 0,
+    e: "ルーブリックは、パフォーマンス評価など、正誤で判定しにくい学びを評価する際に用いられます。" },
+  { id: "met11", c: "method", q: "年長の優秀な生徒を助教（モニター）として教師の代わりに他の生徒を教えさせ、多人数を効率よく教育した方式はどれか。",
+    o: ["ベル＝ランカスター法（モニトリアル・システム）", "ドルトン・プラン", "分団式動的教育法", "プロジェクト・メソッド"], a: 0,
+    e: "19世紀初頭のイギリスでベルとランカスターが広めた方式で、助教法とも呼ばれます。一斉教授の成立に影響を与えました。" },
+  { id: "met12", c: "method", q: "学習内容をスモールステップに分け、即時確認（フィードバック）などの原理によって学習者が自分のペースで進める「プログラム学習」を提唱したのは誰か。",
+    o: ["スキナー", "ブルーナー", "オーズベル", "ソーンダイク"], a: 0,
+    e: "スキナーはオペラント条件づけの理論を基にプログラム学習とティーチング・マシンを開発しました。原理はスモールステップ、積極的反応、即時確認、自己ペースなどです。" },
+  { id: "met13", c: "method", q: "新しい学習内容に先立って、それを理解する枠組みとなる「先行オーガナイザー」を示す「有意味受容学習」を提唱したのは誰か。",
+    o: ["オーズベル", "ブルーナー", "ブルーム", "キルパトリック"], a: 0,
+    e: "オーズベルは、学習者がすでに持っている知識と関連づけられる学習を「有意味」と考え、受容学習も機械的でなく有意味になりうると主張しました。" },
+  { id: "met14", c: "method", q: "教師が子どもに期待をかけることで、実際にその子どもの成績が向上する現象を何というか。",
+    o: ["ピグマリオン効果", "ハロー効果", "ホーソン効果", "ゴーレム効果"], a: 0,
+    e: "ローゼンタールらの実験で示された教師期待効果です。反対に、低い期待が成績を下げる現象はゴーレム効果と呼ばれます。" },
+  { id: "met15", c: "method", q: "ある目立つ特徴（例：字がきれい）に引きずられて、その人の他の特徴まで高く（または低く）評価してしまう傾向を何というか。",
+    o: ["ハロー効果", "ピグマリオン効果", "寛大化傾向", "中心化傾向"], a: 0,
+    e: "ハロー効果（後光効果・光背効果）は、教育評価で注意すべき評価者のバイアスの一つです。" },
+  { id: "met16", c: "method", q: "学校で意図的・明示的に教えられる内容とは別に、学校生活を通じて子どもが暗黙のうちに身につけていく価値観や態度を何というか。",
+    o: ["隠れたカリキュラム", "コア・カリキュラム", "スパイラル・カリキュラム", "教科カリキュラム"], a: 0,
+    e: "ジャクソンが『教室での生活』（1968年）で用いた概念として知られます。時間を守る、評価を気にするといった態度が例として挙げられます。" },
+
+  // ===== 現代の教育課題 =====
+  { id: "mod01", c: "modern", q: "1965年、ユネスコの成人教育推進国際委員会で「生涯教育（lifelong education）」の理念を提唱したのは誰か。",
+    o: ["ラングラン", "ハッチンス", "イリッチ", "ジェルピ"], a: 0,
+    e: "ラングランは、教育を学校教育に限定せず、人の一生を通じて統合的に行われるべきものと捉えました。" },
+  { id: "mod02", c: "modern", q: "『学習社会』を著し、すべての人が生涯にわたって学ぶことを価値とする社会への転換を説いたのは誰か。",
+    o: ["ハッチンス", "ラングラン", "ブルーナー", "デューイ"], a: 0,
+    e: "アメリカのハッチンスは1968年に『学習社会』を著しました。日本の生涯学習政策にも影響を与えています。" },
+  { id: "mod03", c: "modern", q: "学校教育を終えた後も、就労と教育を交互に繰り返す「リカレント教育」を1970年代に提唱した国際機関はどれか。",
+    o: ["OECD（経済協力開発機構）", "ユネスコ", "ユニセフ", "WHO（世界保健機関）"], a: 0,
+    e: "OECDは1973年の報告書でリカレント教育を提唱しました。近年は「学び直し」として日本でも政策的に推進されています。" },
+  { id: "mod04", c: "modern", q: "いじめの定義や、学校におけるいじめ防止のための組織の設置、重大事態への対処などを定めた法律が制定された年はどれか。",
+    o: ["2013年（平成25年）", "2006年（平成18年）", "2000年（平成12年）", "2016年（平成28年）"], a: 0,
+    e: "いじめ防止対策推進法は2013年に制定されました。いじめを「心身の苦痛を感じているもの」と、被害を受けた子どもの立場から定義しています。" },
+  { id: "mod05", c: "modern", q: "OECDが15歳の生徒を対象に、読解力・数学的リテラシー・科学的リテラシーを測る国際的な学習到達度調査はどれか。",
+    o: ["PISA", "TIMSS", "PIAAC", "TALIS"], a: 0,
+    e: "PISAはOECDが実施する調査です。TIMSSはIEA（国際教育到達度評価学会）による算数・数学と理科の調査、PIAACは成人、TALISは教員を対象とするOECDの調査です。" },
+  { id: "mod06", c: "modern", q: "幼稚園教育要領に示された「幼児期の終わりまでに育ってほしい姿」（10の姿）に含まれないものはどれか。",
+    o: ["基本的生活習慣の確立", "協同性", "思考力の芽生え", "豊かな感性と表現"], a: 0,
+    e: "10の姿は、健康な心と体／自立心／協同性／道徳性・規範意識の芽生え／社会生活との関わり／思考力の芽生え／自然との関わり・生命尊重／数量や図形、標識や文字などへの関心・感覚／言葉による伝え合い／豊かな感性と表現、です。保育所保育指針・認定こども園教育・保育要領にも共通して示されています。" },
+  { id: "mod07", c: "modern", q: "幼稚園教育要領・保育所保育指針などで、幼児期に一体的に「育みたい資質・能力」として示されている3つの柱に含まれないものはどれか。",
+    o: ["健康・安全な生活習慣の基礎", "知識及び技能の基礎", "思考力、判断力、表現力等の基礎", "学びに向かう力、人間性等"], a: 0,
+    e: "3つの柱は「知識及び技能の基礎」「思考力、判断力、表現力等の基礎」「学びに向かう力、人間性等」で、小学校以降の学習指導要領の3つの柱とつながるよう整理されています。" },
+  { id: "mod08", c: "modern", q: "2021年の中央教育審議会答申「『令和の日本型学校教育』の構築を目指して」で、一体的に充実させることが求められた2つの学びの組合せはどれか。",
+    o: ["個別最適な学び と 協働的な学び", "主体的な学び と 対話的な学び", "教科の学び と 体験的な学び", "知識の習得 と 活用"], a: 0,
+    e: "同答申は、全ての子どもたちの可能性を引き出す「個別最適な学び」と「協働的な学び」の一体的な充実を掲げました。「主体的・対話的で深い学び」は2017年告示の学習指導要領のキーワードです。" },
+  { id: "mod09", c: "modern", q: "1994年にユネスコとスペイン政府が開催した会議で採択され、「インクルーシブ教育」の考え方を国際的に打ち出した声明はどれか。",
+    o: ["サラマンカ声明", "ジョムティエン宣言", "ハンブルク宣言", "ダカール行動枠組み"], a: 0,
+    e: "サラマンカ声明は、特別なニーズを持つ子どもを含むすべての子どもが通常の学校で共に学ぶことを原則としました。ジョムティエン宣言（1990年）は「万人のための教育（EFA）」の宣言です。" },
+  { id: "mod10", c: "modern", q: "「学校運営協議会」を設置し、保護者や地域住民が学校運営に参画する仕組みをもつ学校を何というか。",
+    o: ["コミュニティ・スクール", "チャーター・スクール", "フリースクール", "オープン・スクール"], a: 0,
+    e: "コミュニティ・スクールは「地方教育行政の組織及び運営に関する法律」に基づく制度で、2017年の改正で学校運営協議会の設置が教育委員会の努力義務となりました。" },
+  { id: "mod11", c: "modern", q: "環境・貧困・人権など現代社会の課題を自らの問題として捉え、持続可能な社会の創り手を育む教育を何というか。",
+    o: ["ESD（持続可能な開発のための教育）", "STEAM教育", "リカレント教育", "キャリア教育"], a: 0,
+    e: "ESDは Education for Sustainable Development の略で、ユネスコが推進しています。2017年告示の幼稚園教育要領や学習指導要領の前文にも「持続可能な社会の創り手」という言葉が盛り込まれました。" },
+  { id: "mod12", c: "modern", q: "学習指導要領の法的な位置づけとして正しいものはどれか。",
+    o: ["文部科学大臣が告示として公示する", "国会が法律として制定する", "各都道府県教育委員会が定める", "各学校が独自に定める"], a: 0,
+    e: "学習指導要領は学校教育法施行規則の規定に基づき、文部科学大臣が告示として公示する教育課程の基準です。おおむね10年ごとに改訂されています。" }
+];
+
+const EXAM_QUESTIONS = [
+ {
+  "id": "ex-law01",
+  "c": "law",
+  "type": "combo",
+  "q": "次の文は「教育基本法」第1条の一部である。（A）・（B）にあてはまる語句の正しい組み合わせを一つ選びなさい。\n\n教育は、（A）を目指し、平和で民主的な国家及び社会の形成者として必要な資質を備えた（B）国民の育成を期して行われなければならない。",
+  "cols": [
+   "A",
+   "B"
+  ],
+  "o": [
+   [
+    "個人の尊厳",
+    "豊かな人間性を備えた"
+   ],
+   [
+    "能力の伸長",
+    "豊かな人間性を備えた"
+   ],
+   [
+    "人格の完成",
+    "豊かな人間性を備えた"
+   ],
+   [
+    "個人の尊厳",
+    "心身ともに健康な"
+   ],
+   [
+    "人格の完成",
+    "心身ともに健康な"
+   ]
+  ],
+  "a": 4,
+  "e": "第1条（教育の目的）の条文です。「自主的精神に充ちた」は旧教育基本法（1947年）の第1条にあった表現で、2006年の全部改正で削られました。改正前後の違いも問われやすいポイントです。"
+ },
+ {
+  "id": "ex-law02",
+  "c": "law",
+  "type": "combo",
+  "q": "次の文のうち、適切なものを○、不適切なものを×とした場合の正しい組み合わせを一つ選びなさい。\n\n【「教育基本法」第2条（教育の目標）に規定されているもの】",
+  "cols": [
+   "A",
+   "B",
+   "C",
+   "D"
+  ],
+  "o": [
+   [
+    "×",
+    "○",
+    "×",
+    "○"
+   ],
+   [
+    "○",
+    "×",
+    "×",
+    "×"
+   ],
+   [
+    "○",
+    "○",
+    "○",
+    "×"
+   ],
+   [
+    "×",
+    "○",
+    "×",
+    "×"
+   ],
+   [
+    "○",
+    "○",
+    "×",
+    "○"
+   ]
+  ],
+  "a": 4,
+  "e": "第2条は5つの号で教育の目標を定めています。A（第1号）、B（第4号）、D（第5号）は条文どおりです。Cのような規定はありません。",
+  "items": [
+   "A　幅広い知識と教養を身に付け、真理を求める態度を養い、豊かな情操と道徳心を培うとともに、健やかな身体を養うこと。",
+   "B　生命を尊び、自然を大切にし、環境の保全に寄与する態度を養うこと。",
+   "C　国家の発展に尽くす忠誠心を養い、国の定める道徳規範を身に付けさせること。",
+   "D　伝統と文化を尊重し、それらをはぐくんできた我が国と郷土を愛するとともに、他国を尊重し、国際社会の平和と発展に寄与する態度を養うこと。"
+  ]
+ },
+ {
+  "id": "ex-law03",
+  "c": "law",
+  "type": "combo",
+  "q": "次の文は「教育基本法」第4条第1項である。（A）・（B）にあてはまる語句の正しい組み合わせを一つ選びなさい。\n\nすべて国民は、ひとしく、その（A）に応じた教育を受ける機会を与えられなければならず、人種、信条、性別、社会的身分、（B）又は門地によって、教育上差別されない。",
+  "cols": [
+   "A",
+   "B"
+  ],
+  "o": [
+   [
+    "能力",
+    "経済的地位"
+   ],
+   [
+    "能力",
+    "家庭環境"
+   ],
+   [
+    "能力",
+    "国籍"
+   ],
+   [
+    "適性",
+    "国籍"
+   ],
+   [
+    "年齢",
+    "経済的地位"
+   ]
+  ],
+  "a": 0,
+  "e": "第4条（教育の機会均等）です。第2項では障害のある者への教育上の支援、第3項では経済的理由で修学が困難な者への奨学の措置を定めています。"
+ },
+ {
+  "id": "ex-law04",
+  "c": "law",
+  "type": "combo",
+  "q": "次の文は「教育基本法」第10条第1項である。（A）・（B）にあてはまる語句の正しい組み合わせを一つ選びなさい。\n\n父母その他の保護者は、子の教育について（A）を有するものであって、生活のために必要な習慣を身に付けさせるとともに、（B）を育成し、心身の調和のとれた発達を図るよう努めるものとする。",
+  "cols": [
+   "A",
+   "B"
+  ],
+  "o": [
+   [
+    "監護の義務",
+    "協調性"
+   ],
+   [
+    "最終的責任",
+    "協調性"
+   ],
+   [
+    "第一義的責任",
+    "道徳心"
+   ],
+   [
+    "最終的責任",
+    "道徳心"
+   ],
+   [
+    "第一義的責任",
+    "自立心"
+   ]
+  ],
+  "a": 4,
+  "e": "第10条（家庭教育）は2006年改正で新設されました。第2項では、国及び地方公共団体が家庭教育を支援する施策を講ずるよう努めることを定めています。"
+ },
+ {
+  "id": "ex-law05",
+  "c": "law",
+  "type": "combo",
+  "q": "次の文のうち、適切なものを○、不適切なものを×とした場合の正しい組み合わせを一つ選びなさい。\n\n【「学校教育法」第23条に規定される幼稚園教育の目標】",
+  "cols": [
+   "A",
+   "B",
+   "C",
+   "D"
+  ],
+  "o": [
+   [
+    "○",
+    "×",
+    "○",
+    "×"
+   ],
+   [
+    "○",
+    "×",
+    "×",
+    "×"
+   ],
+   [
+    "○",
+    "×",
+    "○",
+    "○"
+   ],
+   [
+    "○",
+    "○",
+    "×",
+    "○"
+   ],
+   [
+    "○",
+    "○",
+    "○",
+    "×"
+   ]
+  ],
+  "a": 2,
+  "e": "第23条は5つの目標を定めています（基本的な習慣／集団生活と規範意識の芽生え／身近な社会生活・生命・自然への興味と思考力の芽生え／言葉／感性と表現力）。Bのような教科学習の目標は含まれていません。",
+  "items": [
+   "A　健康、安全で幸福な生活のために必要な基本的な習慣を養い、身体諸機能の調和的発達を図ること。",
+   "B　文字の読み書きと数の計算の基礎を確実に身に付けさせること。",
+   "C　日常の会話や、絵本、童話等に親しむことを通じて、言葉の使い方を正しく導くとともに、相手の話を理解しようとする態度を養うこと。",
+   "D　音楽、身体による表現、造形等に親しむことを通じて、豊かな感性と表現力の芽生えを養うこと。"
+  ]
+ },
+ {
+  "id": "ex-law06",
+  "c": "law",
+  "type": "combo",
+  "q": "次の文は「日本国憲法」第26条第2項である。（A）・（B）にあてはまる語句の正しい組み合わせを一つ選びなさい。\n\nすべて国民は、法律の定めるところにより、その保護する子女に（A）を受けさせる義務を負ふ。義務教育は、これを（B）とする。",
+  "cols": [
+   "A",
+   "B"
+  ],
+  "o": [
+   [
+    "義務教育",
+    "強制"
+   ],
+   [
+    "普通教育",
+    "無償"
+   ],
+   [
+    "普通教育",
+    "公費負担"
+   ],
+   [
+    "義務教育",
+    "公費負担"
+   ],
+   [
+    "学校教育",
+    "公費負担"
+   ]
+  ],
+  "a": 1,
+  "e": "第1項は「教育を受ける権利」、第2項は「教育を受けさせる義務」と「義務教育の無償」です。義務を負うのは子ども本人ではなく保護者である点に注意しましょう。"
+ },
+ {
+  "id": "ex-law07",
+  "c": "law",
+  "type": "combo",
+  "q": "次の文のうち、適切なものを○、不適切なものを×とした場合の正しい組み合わせを一つ選びなさい。\n\n【「児童の権利に関する条約」について】",
+  "cols": [
+   "A",
+   "B",
+   "C",
+   "D"
+  ],
+  "o": [
+   [
+    "○",
+    "○",
+    "○",
+    "×"
+   ],
+   [
+    "○",
+    "×",
+    "○",
+    "×"
+   ],
+   [
+    "×",
+    "○",
+    "○",
+    "×"
+   ],
+   [
+    "○",
+    "×",
+    "○",
+    "○"
+   ],
+   [
+    "○",
+    "○",
+    "×",
+    "×"
+   ]
+  ],
+  "a": 0,
+  "e": "A は第3条（最善の利益）、B は第12条（意見表明権）、C は第1条（児童の定義）です。条約は1989年に採択され、日本の批准は1994年です。",
+  "items": [
+   "A　児童に関するすべての措置をとるに当たっては、児童の最善の利益が主として考慮される。",
+   "B　自己の意見を形成する能力のある児童には、その児童に影響を及ぼすすべての事項について、自由に自己の意見を表明する権利が確保される。",
+   "C　この条約では、児童とは、その者に適用される法律によりより早く成年に達したものを除き、18歳未満のすべての者をいう。",
+   "D　日本は、この条約が国連で採択された翌年の1990年に批准した。"
+  ]
+ },
+ {
+  "id": "ex-law08",
+  "c": "law",
+  "type": "combo",
+  "q": "次の文のうち、適切なものを○、不適切なものを×とした場合の正しい組み合わせを一つ選びなさい。\n\n【「こども基本法」について】",
+  "cols": [
+   "A",
+   "B",
+   "C",
+   "D"
+  ],
+  "o": [
+   [
+    "×",
+    "×",
+    "×",
+    "○"
+   ],
+   [
+    "○",
+    "○",
+    "○",
+    "○"
+   ],
+   [
+    "○",
+    "○",
+    "×",
+    "○"
+   ],
+   [
+    "○",
+    "×",
+    "○",
+    "○"
+   ],
+   [
+    "○",
+    "○",
+    "×",
+    "×"
+   ]
+  ],
+  "a": 2,
+  "e": "こども基本法では「こども」を「心身の発達の過程にある者」と定義し、年齢で区切っていません。政府が定める大綱は「こども大綱」と呼ばれています。",
+  "items": [
+   "A　2023（令和5）年4月に、こども家庭庁の発足と同時に施行された。",
+   "B　日本国憲法及び児童の権利に関する条約の精神にのっとることが目的規定に示されている。",
+   "C　この法律で「こども」とは、18歳未満の者をいう。",
+   "D　政府は、こども施策を総合的に推進するため、こども施策に関する大綱を定めなければならない。"
+  ]
+ },
+ {
+  "id": "ex-west01",
+  "c": "west",
+  "type": "combo",
+  "q": "次の人物A〜Dと、その著作ア〜エの正しい組み合わせを一つ選びなさい。",
+  "cols": [
+   "A",
+   "B",
+   "C",
+   "D"
+  ],
+  "o": [
+   [
+    "イ",
+    "ア",
+    "ウ",
+    "エ"
+   ],
+   [
+    "イ",
+    "ウ",
+    "ア",
+    "エ"
+   ],
+   [
+    "イ",
+    "エ",
+    "ア",
+    "ウ"
+   ],
+   [
+    "イ",
+    "エ",
+    "ウ",
+    "ア"
+   ],
+   [
+    "エ",
+    "ウ",
+    "ア",
+    "イ"
+   ]
+  ],
+  "a": 1,
+  "e": "ルソー『エミール』、ペスタロッチ『隠者の夕暮』『ゲルトルート児童教育法』、フレーベル『人間の教育』、デューイ『民主主義と教育』『学校と社会』。人物と著作の組合せは頻出です。",
+  "items": [
+   "A　ルソー",
+   "B　ペスタロッチ",
+   "C　フレーベル",
+   "D　デューイ"
+  ],
+  "pool": [
+   "ア　『人間の教育』",
+   "イ　『エミール』",
+   "ウ　『隠者の夕暮』",
+   "エ　『民主主義と教育』"
+  ]
+ },
+ {
+  "id": "ex-west02",
+  "c": "west",
+  "type": "combo",
+  "q": "次の人物A〜Dと、その人物に関係の深い語句ア〜エの正しい組み合わせを一つ選びなさい。",
+  "cols": [
+   "A",
+   "B",
+   "C",
+   "D"
+  ],
+  "o": [
+   [
+    "イ",
+    "ア",
+    "エ",
+    "ウ"
+   ],
+   [
+    "エ",
+    "ア",
+    "イ",
+    "ウ"
+   ],
+   [
+    "イ",
+    "エ",
+    "ア",
+    "ウ"
+   ],
+   [
+    "エ",
+    "イ",
+    "ア",
+    "ウ"
+   ],
+   [
+    "ウ",
+    "ア",
+    "エ",
+    "イ"
+   ]
+  ],
+  "a": 0,
+  "e": "コメニウスは世界初の絵入り教科書『世界図絵』、ロックは人間の心を白紙とみる精神白紙説、ヘルバルトは「明瞭・連合・系統・方法」の四段階教授法、モンテッソーリは敏感期と教具で知られます。",
+  "items": [
+   "A　コメニウス",
+   "B　ロック",
+   "C　ヘルバルト",
+   "D　モンテッソーリ"
+  ],
+  "pool": [
+   "ア　精神白紙説（タブラ・ラサ）",
+   "イ　『世界図絵』",
+   "ウ　敏感期",
+   "エ　四段階教授法"
+  ]
+ },
+ {
+  "id": "ex-west03",
+  "c": "west",
+  "type": "combo",
+  "q": "次の文のうち、適切なものを○、不適切なものを×とした場合の正しい組み合わせを一つ選びなさい。",
+  "cols": [
+   "A",
+   "B",
+   "C",
+   "D"
+  ],
+  "o": [
+   [
+    "○",
+    "×",
+    "×",
+    "○"
+   ],
+   [
+    "○",
+    "○",
+    "×",
+    "×"
+   ],
+   [
+    "×",
+    "×",
+    "×",
+    "×"
+   ],
+   [
+    "○",
+    "×",
+    "○",
+    "○"
+   ],
+   [
+    "○",
+    "×",
+    "○",
+    "×"
+   ]
+  ],
+  "a": 4,
+  "e": "Bの「子どもの家」はモンテッソーリです（フレーベルは1840年に幼稚園を創設）。Dの『大教授学』はコメニウスで、エレン・ケイの著作は『児童の世紀』です。",
+  "items": [
+   "A　ルソーは『エミール』において、子どもの自然な成長を重んじる消極教育を説いた。",
+   "B　フレーベルは、1907年にローマのスラム街に「子どもの家」を開設した。",
+   "C　デューイは、シカゴ大学に附属実験学校を開き、経験を重視する教育を実践した。",
+   "D　エレン・ケイは『大教授学』を著し、「あらゆる人にあらゆる事柄を教授する」ことを説いた。"
+  ]
+ },
+ {
+  "id": "ex-west04",
+  "c": "west",
+  "type": "combo",
+  "q": "次の文の（A）・（B）にあてはまる語句の正しい組み合わせを一つ選びなさい。\n\n（A）は、学校を子どもたちが共同して活動する小さな社会としてつくりかえるべきだと考え、シカゴ大学での実験学校の実践をもとに『（B）』を著した。",
+  "cols": [
+   "A",
+   "B"
+  ],
+  "o": [
+   [
+    "キルパトリック",
+    "教育の過程"
+   ],
+   [
+    "デューイ",
+    "学校と社会"
+   ],
+   [
+    "ブルーナー",
+    "児童の世紀"
+   ],
+   [
+    "キルパトリック",
+    "児童の世紀"
+   ],
+   [
+    "デューイ",
+    "教育の過程"
+   ]
+  ],
+  "a": 1,
+  "e": "デューイは、学校を社会生活と結びついた「小型の社会」とすべきだと説きました。『教育の過程』はブルーナー、『児童の世紀』はエレン・ケイの著作です。"
+ },
+ {
+  "id": "ex-west05",
+  "c": "west",
+  "type": "combo",
+  "q": "次の文のうち、適切なものを○、不適切なものを×とした場合の正しい組み合わせを一つ選びなさい。",
+  "cols": [
+   "A",
+   "B",
+   "C",
+   "D"
+  ],
+  "o": [
+   [
+    "○",
+    "×",
+    "○",
+    "○"
+   ],
+   [
+    "○",
+    "○",
+    "○",
+    "×"
+   ],
+   [
+    "○",
+    "×",
+    "×",
+    "×"
+   ],
+   [
+    "×",
+    "×",
+    "○",
+    "○"
+   ],
+   [
+    "○",
+    "○",
+    "×",
+    "○"
+   ]
+  ],
+  "a": 0,
+  "e": "フレイレは「銀行型教育」を批判し、教師と学習者の対話による「問題提起型教育」を唱えました。そのほかは正しい記述です。",
+  "items": [
+   "A　イリッチは『脱学校の社会』を著し、制度化された学校を批判した。",
+   "B　フレイレは、教師が知識を一方的に預け入れる「銀行型教育」を、効率的な方法として推奨した。",
+   "C　ラングランは、ユネスコの会議で生涯教育の理念を提唱した。",
+   "D　ブルーナーは、学習者が知識の構造を自ら見いだしていく発見学習を提唱した。"
+  ]
+ },
+ {
+  "id": "ex-jp01",
+  "c": "japan",
+  "type": "combo",
+  "q": "次の人物A〜Dと、その人物が開いた私塾ア〜エの正しい組み合わせを一つ選びなさい。",
+  "cols": [
+   "A",
+   "B",
+   "C",
+   "D"
+  ],
+  "o": [
+   [
+    "ア",
+    "イ",
+    "エ",
+    "ウ"
+   ],
+   [
+    "ウ",
+    "ア",
+    "エ",
+    "イ"
+   ],
+   [
+    "イ",
+    "ア",
+    "エ",
+    "ウ"
+   ],
+   [
+    "エ",
+    "ア",
+    "イ",
+    "ウ"
+   ],
+   [
+    "イ",
+    "ウ",
+    "ア",
+    "エ"
+   ]
+  ],
+  "a": 2,
+  "e": "広瀬淡窓は豊後日田の咸宜園（三奪法・月旦評）、緒方洪庵は大坂の適塾（蘭学）、吉田松陰は長州萩の松下村塾、中江藤樹は近江の藤樹書院です。",
+  "items": [
+   "A　広瀬淡窓",
+   "B　緒方洪庵",
+   "C　吉田松陰",
+   "D　中江藤樹"
+  ],
+  "pool": [
+   "ア　適塾",
+   "イ　咸宜園",
+   "ウ　藤樹書院",
+   "エ　松下村塾"
+  ]
+ },
+ {
+  "id": "ex-jp02",
+  "c": "japan",
+  "q": "次のA〜Dを、古いものから順に並べた場合の正しい組み合わせを一つ選びなさい。\n\nA　教育勅語の発布\nB　学制の公布\nC　学校令の公布\nD　教育基本法の制定",
+  "o": [
+   "B → C → A → D",
+   "B → A → C → D",
+   "C → B → A → D",
+   "A → B → C → D",
+   "B → C → D → A"
+  ],
+  "a": 0,
+  "e": "学制（1872年）→ 学校令（1886年、初代文部大臣・森有礼）→ 教育勅語（1890年）→ 教育基本法（1947年）の順です。",
+  "fixed": true
+ },
+ {
+  "id": "ex-jp03",
+  "c": "japan",
+  "type": "combo",
+  "q": "次の文のうち、適切なものを○、不適切なものを×とした場合の正しい組み合わせを一つ選びなさい。\n\n【日本の保育の歴史について】",
+  "cols": [
+   "A",
+   "B",
+   "C",
+   "D"
+  ],
+  "o": [
+   [
+    "○",
+    "○",
+    "×",
+    "×"
+   ],
+   [
+    "×",
+    "×",
+    "○",
+    "×"
+   ],
+   [
+    "○",
+    "×",
+    "○",
+    "○"
+   ],
+   [
+    "○",
+    "×",
+    "○",
+    "×"
+   ],
+   [
+    "○",
+    "○",
+    "○",
+    "○"
+   ]
+  ],
+  "a": 3,
+  "e": "二葉幼稚園（1900年）は貧しい家庭の子どものための施設です。城戸幡太郎は保育問題研究会を組織し、社会中心主義の立場から倉橋の児童中心主義を批判的に捉えました。",
+  "items": [
+   "A　東京女子師範学校附属幼稚園は1876（明治9）年に開設され、フレーベルの恩物を用いた保育が行われた。",
+   "B　二葉幼稚園は、野口幽香らによって、主に上流家庭の子どもを対象として開設された。",
+   "C　赤沢鍾美・仲子夫妻は、新潟静修学校に付設して幼い子どもを預かる取り組みを始めた。",
+   "D　城戸幡太郎は、児童中心主義の立場から倉橋惣三の誘導保育論を全面的に支持し、社会中心主義を批判した。"
+  ]
+ },
+ {
+  "id": "ex-jp04",
+  "c": "japan",
+  "type": "combo",
+  "q": "大正期の新教育（大正自由教育）に関する次の人物A〜Dと、関係の深い事項ア〜エの正しい組み合わせを一つ選びなさい。",
+  "cols": [
+   "A",
+   "B",
+   "C",
+   "D"
+  ],
+  "o": [
+   [
+    "イ",
+    "エ",
+    "ウ",
+    "ア"
+   ],
+   [
+    "イ",
+    "ウ",
+    "エ",
+    "ア"
+   ],
+   [
+    "イ",
+    "ウ",
+    "ア",
+    "エ"
+   ],
+   [
+    "ア",
+    "イ",
+    "エ",
+    "ウ"
+   ],
+   [
+    "ウ",
+    "イ",
+    "エ",
+    "ア"
+   ]
+  ],
+  "a": 1,
+  "e": "沢柳政太郎は成城小学校（1917年）、羽仁もと子は自由学園（1921年）、及川平治は明石女子師範附属小での分団式動的教育法、鈴木三重吉は『赤い鳥』（1918年）です。",
+  "items": [
+   "A　沢柳政太郎",
+   "B　羽仁もと子",
+   "C　及川平治",
+   "D　鈴木三重吉"
+  ],
+  "pool": [
+   "ア　児童雑誌『赤い鳥』",
+   "イ　成城小学校",
+   "ウ　自由学園",
+   "エ　分団式動的教育法"
+  ]
+ },
+ {
+  "id": "ex-jp05",
+  "c": "japan",
+  "type": "combo",
+  "q": "次の文の（A）・（B）にあてはまる語句の正しい組み合わせを一つ選びなさい。\n\n倉橋惣三は『（A）』を著し、子どもの自発的な生活を尊重しつつ、保育者が子どもの興味に沿って生活を発展させていく（B）を提唱した。",
+  "cols": [
+   "A",
+   "B"
+  ],
+  "o": [
+   [
+    "和俗童子訓",
+    "一斉保育"
+   ],
+   [
+    "幼児教育論",
+    "一斉保育"
+   ],
+   [
+    "和俗童子訓",
+    "系統保育"
+   ],
+   [
+    "幼稚園真諦",
+    "誘導保育"
+   ],
+   [
+    "幼稚園真諦",
+    "一斉保育"
+   ]
+  ],
+  "a": 3,
+  "e": "倉橋惣三の誘導保育論は「生活を、生活で、生活へ」という言葉に象徴されます。『幼児教育論』は城戸幡太郎、『和俗童子訓』は貝原益軒の著作です。"
+ },
+ {
+  "id": "ex-jp06",
+  "c": "japan",
+  "type": "combo",
+  "q": "次の文のうち、適切なものを○、不適切なものを×とした場合の正しい組み合わせを一つ選びなさい。\n\n【戦後の幼児教育・保育について】",
+  "cols": [
+   "A",
+   "B",
+   "C",
+   "D"
+  ],
+  "o": [
+   [
+    "○",
+    "×",
+    "×",
+    "×"
+   ],
+   [
+    "○",
+    "×",
+    "×",
+    "○"
+   ],
+   [
+    "×",
+    "○",
+    "×",
+    "×"
+   ],
+   [
+    "○",
+    "○",
+    "×",
+    "○"
+   ],
+   [
+    "○",
+    "○",
+    "×",
+    "×"
+   ]
+  ],
+  "a": 3,
+  "e": "幼稚園教育要領が初めて作成されたのは1956（昭和31）年です。1989年は「環境を通して行う教育」を基本とする大きな改訂が行われた年です。",
+  "items": [
+   "A　1947（昭和22）年に教育基本法と学校教育法が制定され、幼稚園は学校教育法上の学校と位置づけられた。",
+   "B　1948（昭和23）年、文部省は幼児教育の手引書として「保育要領」を刊行した。",
+   "C　幼稚園教育要領は、1989（平成元）年に初めて作成された。",
+   "D　保育所保育指針は、1965（昭和40）年に初めて作成された。"
+  ]
+ },
+ {
+  "id": "ex-met01",
+  "c": "method",
+  "type": "combo",
+  "q": "次の教育方法A〜Dと、その提唱者ア〜エの正しい組み合わせを一つ選びなさい。",
+  "cols": [
+   "A",
+   "B",
+   "C",
+   "D"
+  ],
+  "o": [
+   [
+    "ア",
+    "イ",
+    "エ",
+    "ウ"
+   ],
+   [
+    "ア",
+    "イ",
+    "ウ",
+    "エ"
+   ],
+   [
+    "ア",
+    "ウ",
+    "エ",
+    "イ"
+   ],
+   [
+    "エ",
+    "ウ",
+    "ア",
+    "イ"
+   ],
+   [
+    "ア",
+    "エ",
+    "ウ",
+    "イ"
+   ]
+  ],
+  "a": 2,
+  "e": "いずれも20世紀前半の新教育運動の中で生まれた方法です。ドルトン＝パーカースト、ウィネトカ＝ウォッシュバーン、イエナ＝ペーターゼン、プロジェクト・メソッド＝キルパトリック。",
+  "items": [
+   "A　ドルトン・プラン",
+   "B　ウィネトカ・プラン",
+   "C　イエナ・プラン",
+   "D　プロジェクト・メソッド"
+  ],
+  "pool": [
+   "ア　パーカースト",
+   "イ　キルパトリック",
+   "ウ　ウォッシュバーン",
+   "エ　ペーターゼン"
+  ]
+ },
+ {
+  "id": "ex-met02",
+  "c": "method",
+  "type": "combo",
+  "q": "次の文のうち、適切なものを○、不適切なものを×とした場合の正しい組み合わせを一つ選びなさい。\n\n【教育評価について】",
+  "cols": [
+   "A",
+   "B",
+   "C",
+   "D"
+  ],
+  "o": [
+   [
+    "○",
+    "○",
+    "○",
+    "×"
+   ],
+   [
+    "○",
+    "×",
+    "○",
+    "×"
+   ],
+   [
+    "○",
+    "×",
+    "○",
+    "○"
+   ],
+   [
+    "×",
+    "×",
+    "×",
+    "○"
+   ],
+   [
+    "○",
+    "○",
+    "×",
+    "○"
+   ]
+  ],
+  "a": 2,
+  "e": "形成的評価は学習の途中で行い、つまずきの発見や指導の改善に生かす評価です。最終的な成績の判定は総括的評価にあたります。",
+  "items": [
+   "A　診断的評価は、学習を始める前に学習者の実態や準備状況を把握するために行う。",
+   "B　形成的評価は、単元の終了時に最終的な成績を決定するために行う。",
+   "C　総括的評価は、単元や学期の終わりに、学習の成果を総合的に判定するために行う。",
+   "D　個人内評価は、その子ども自身の過去の状態や他の側面と比較して評価する方法である。"
+  ]
+ },
+ {
+  "id": "ex-met03",
+  "c": "method",
+  "type": "combo",
+  "q": "次の文の（A）・（B）にあてはまる語句の正しい組み合わせを一つ選びなさい。\n\n（A）が提唱した完全習得学習では、学習の途中で（B）評価を行い、目標に到達していない学習者には補充的な指導を、到達した学習者には発展的な学習を用意する。",
+  "cols": [
+   "A",
+   "B"
+  ],
+  "o": [
+   [
+    "スキナー",
+    "相対"
+   ],
+   [
+    "ブルーム",
+    "形成的"
+   ],
+   [
+    "ブルーナー",
+    "総括的"
+   ],
+   [
+    "スキナー",
+    "総括的"
+   ],
+   [
+    "ブルーム",
+    "総括的"
+   ]
+  ],
+  "a": 1,
+  "e": "ブルームは完全習得学習（マスタリー・ラーニング）を提唱し、診断的・形成的・総括的評価を区別しました。"
+ },
+ {
+  "id": "ex-met04",
+  "c": "method",
+  "type": "combo",
+  "q": "次のカリキュラムに関する用語A〜Dと、その説明ア〜エの正しい組み合わせを一つ選びなさい。",
+  "cols": [
+   "A",
+   "B",
+   "C",
+   "D"
+  ],
+  "o": [
+   [
+    "ウ",
+    "エ",
+    "ア",
+    "イ"
+   ],
+   [
+    "イ",
+    "ウ",
+    "エ",
+    "ア"
+   ],
+   [
+    "ウ",
+    "ア",
+    "エ",
+    "イ"
+   ],
+   [
+    "ア",
+    "イ",
+    "ウ",
+    "エ"
+   ],
+   [
+    "ウ",
+    "イ",
+    "エ",
+    "ア"
+   ]
+  ],
+  "a": 4,
+  "e": "スパイラル・カリキュラムはブルーナーの考え方に由来します。スタートカリキュラムは、幼保小の円滑な接続のために小学校で編成されるものです。",
+  "items": [
+   "A　スパイラル・カリキュラム",
+   "B　コア・カリキュラム",
+   "C　隠れたカリキュラム",
+   "D　スタートカリキュラム"
+  ],
+  "pool": [
+   "ア　小学校入学当初に、幼児期の学びや生活を生かして編成する教育課程",
+   "イ　中心となる課程を設け、その周辺に関連する内容を配置する教育課程",
+   "ウ　同じ内容を、発達段階に応じて繰り返し、より高度な水準で学ぶよう編成する教育課程",
+   "エ　意図的な教育内容とは別に、学校生活を通じて暗黙のうちに伝達される価値や態度"
+  ]
+ },
+ {
+  "id": "ex-met05",
+  "c": "method",
+  "type": "combo",
+  "q": "次の文のうち、適切なものを○、不適切なものを×とした場合の正しい組み合わせを一つ選びなさい。\n\n【スキナーのプログラム学習の原理について】",
+  "cols": [
+   "A",
+   "B",
+   "C",
+   "D"
+  ],
+  "o": [
+   [
+    "○",
+    "○",
+    "○",
+    "○"
+   ],
+   [
+    "×",
+    "○",
+    "×",
+    "○"
+   ],
+   [
+    "×",
+    "○",
+    "○",
+    "○"
+   ],
+   [
+    "○",
+    "×",
+    "×",
+    "×"
+   ],
+   [
+    "○",
+    "○",
+    "×",
+    "○"
+   ]
+  ],
+  "a": 4,
+  "e": "プログラム学習では、学習者がそれぞれ自分のペースで進む「自己ペース（学習者検証）」の原理が重視されます。一斉進度は原理に含まれません。",
+  "items": [
+   "A　学習内容を細かな段階に分け、少しずつ進めるスモールステップの原理。",
+   "B　学習者の反応の正誤をすぐに知らせる即時確認の原理。",
+   "C　学級の全員が同じ速さで進むよう、教師が進度を統一する一斉進度の原理。",
+   "D　学習者が自ら答えを書くなど、積極的に反応することを求める積極的反応の原理。"
+  ]
+ },
+ {
+  "id": "ex-mod01",
+  "c": "modern",
+  "type": "combo",
+  "q": "次の文は、2023（令和5）年に閣議決定された「第4期教育振興基本計画」の総括的な基本方針（コンセプト）に関する記述である。（A）・（B）にあてはまる語句の正しい組み合わせを一つ選びなさい。\n\n2040年以降の社会を見据えた（A）の育成\n日本社会に根差した（B）の向上",
+  "cols": [
+   "A",
+   "B"
+  ],
+  "o": [
+   [
+    "持続可能な社会の創り手",
+    "ウェルビーイング"
+   ],
+   [
+    "グローバル人材",
+    "学力"
+   ],
+   [
+    "持続可能な社会の創り手",
+    "自己肯定感"
+   ],
+   [
+    "生きる力",
+    "自己肯定感"
+   ],
+   [
+    "グローバル人材",
+    "自己肯定感"
+   ]
+  ],
+  "a": 0,
+  "e": "第4期計画（令和5〜9年度）は、この2つをコンセプトに掲げています。教育振興基本計画は、教育基本法第17条に基づいて政府が策定する計画です。"
+ },
+ {
+  "id": "ex-mod02",
+  "c": "modern",
+  "q": "「幼保小の架け橋プログラム」において「架け橋期」とされている期間として、正しいものを一つ選びなさい。",
+  "o": [
+   "4歳児から5歳児までの2年間",
+   "3歳児から小学校1年生までの4年間",
+   "5歳児から小学校1年生までの2年間",
+   "5歳児から小学校2年生までの3年間",
+   "小学校1年生から2年生までの2年間"
+  ],
+  "a": 2,
+  "e": "義務教育開始前後の5歳児から小学校1年生までの2年間を「架け橋期」とし、幼保小が連携してこの時期のカリキュラムを作成・実施することが推進されています。",
+  "fixed": true
+ },
+ {
+  "id": "ex-mod03",
+  "c": "modern",
+  "type": "combo",
+  "q": "次の文のうち、適切なものを○、不適切なものを×とした場合の正しい組み合わせを一つ選びなさい。\n\n【中央教育審議会答申「『令和の日本型学校教育』の構築を目指して」（2021年）について】",
+  "cols": [
+   "A",
+   "B",
+   "C",
+   "D"
+  ],
+  "o": [
+   [
+    "×",
+    "○",
+    "○",
+    "○"
+   ],
+   [
+    "○",
+    "×",
+    "×",
+    "○"
+   ],
+   [
+    "×",
+    "○",
+    "×",
+    "×"
+   ],
+   [
+    "○",
+    "○",
+    "×",
+    "○"
+   ],
+   [
+    "○",
+    "○",
+    "○",
+    "×"
+   ]
+  ],
+  "a": 3,
+  "e": "答申は「個別最適な学び」が「孤立した学び」に陥らないよう、「協働的な学び」と一体的に充実させることを求めています。",
+  "items": [
+   "A　全ての子供たちの可能性を引き出す、個別最適な学びと協働的な学びの一体的な充実を目指している。",
+   "B　GIGAスクール構想による1人1台端末などのICTの活用を、学びの充実に生かすことが求められている。",
+   "C　「個別最適な学び」とは、学習を子ども一人で完結させ、他者との関わりを減らすことを意味する。",
+   "D　学校が学習機会と学力を保障するだけでなく、全人的な発達・成長の保障や、居場所・セーフティネットとしての役割も担うことが示されている。"
+  ]
+ },
+ {
+  "id": "ex-mod04",
+  "c": "modern",
+  "type": "combo",
+  "q": "生涯学習に関する次の人物・機関A〜Dと、関係の深い語句ア〜エの正しい組み合わせを一つ選びなさい。",
+  "cols": [
+   "A",
+   "B",
+   "C",
+   "D"
+  ],
+  "o": [
+   [
+    "イ",
+    "エ",
+    "ウ",
+    "ア"
+   ],
+   [
+    "ウ",
+    "イ",
+    "ア",
+    "エ"
+   ],
+   [
+    "イ",
+    "ウ",
+    "エ",
+    "ア"
+   ],
+   [
+    "イ",
+    "ウ",
+    "ア",
+    "エ"
+   ],
+   [
+    "イ",
+    "ア",
+    "ウ",
+    "エ"
+   ]
+  ],
+  "a": 3,
+  "e": "ラングラン＝生涯教育（1965年、ユネスコ）、ハッチンス＝『学習社会』（1968年）、OECD＝リカレント教育（1973年）、イリッチ＝『脱学校の社会』。",
+  "items": [
+   "A　ラングラン",
+   "B　ハッチンス",
+   "C　OECD",
+   "D　イリッチ"
+  ],
+  "pool": [
+   "ア　リカレント教育",
+   "イ　生涯教育",
+   "ウ　学習社会",
+   "エ　脱学校論"
+  ]
+ },
+ {
+  "id": "ex-mod05",
+  "c": "modern",
+  "type": "combo",
+  "q": "次の文のうち、適切なものを○、不適切なものを×とした場合の正しい組み合わせを一つ選びなさい。\n\n【幼稚園教育要領に示される「幼児期の終わりまでに育ってほしい姿」に含まれるもの】",
+  "cols": [
+   "A",
+   "B",
+   "C",
+   "D"
+  ],
+  "o": [
+   [
+    "○",
+    "×",
+    "○",
+    "○"
+   ],
+   [
+    "○",
+    "×",
+    "○",
+    "×"
+   ],
+   [
+    "○",
+    "×",
+    "×",
+    "○"
+   ],
+   [
+    "×",
+    "×",
+    "○",
+    "○"
+   ],
+   [
+    "○",
+    "○",
+    "×",
+    "○"
+   ]
+  ],
+  "a": 0,
+  "e": "10の姿は、健康な心と体／自立心／協同性／道徳性・規範意識の芽生え／社会生活との関わり／思考力の芽生え／自然との関わり・生命尊重／数量や図形、標識や文字などへの関心・感覚／言葉による伝え合い／豊かな感性と表現、です。「競争心」は含まれません。",
+  "items": [
+   "A　自立心",
+   "B　競争心",
+   "C　言葉による伝え合い",
+   "D　数量や図形、標識や文字などへの関心・感覚"
+  ]
+ },
+ {
+  "id": "ex-mod06",
+  "c": "modern",
+  "type": "combo",
+  "q": "次の文のうち、適切なものを○、不適切なものを×とした場合の正しい組み合わせを一つ選びなさい。\n\n【「いじめ防止対策推進法」について】",
+  "cols": [
+   "A",
+   "B",
+   "C",
+   "D"
+  ],
+  "o": [
+   [
+    "×",
+    "○",
+    "×",
+    "○"
+   ],
+   [
+    "○",
+    "○",
+    "×",
+    "×"
+   ],
+   [
+    "○",
+    "×",
+    "×",
+    "×"
+   ],
+   [
+    "○",
+    "○",
+    "×",
+    "○"
+   ],
+   [
+    "○",
+    "○",
+    "○",
+    "×"
+   ]
+  ],
+  "a": 3,
+  "e": "法律の定義では、心理的・物理的な影響を与える行為に「インターネットを通じて行われるものを含む」と明記されています。",
+  "items": [
+   "A　2013（平成25）年に制定された。",
+   "B　いじめとは、行為の対象となった児童等が心身の苦痛を感じているものをいう。",
+   "C　インターネットを通じて行われる行為は、この法律のいじめには含まれない。",
+   "D　学校は、いじめの防止等に関する措置を実効的に行うため、複数の教職員などで構成される組織を置くものとされている。"
+  ]
+ },
+ {
+  "id": "ex-mod07",
+  "c": "modern",
+  "type": "combo",
+  "q": "次の文のうち、適切なものを○、不適切なものを×とした場合の正しい組み合わせを一つ選びなさい。\n\n【インクルーシブ教育について】",
+  "cols": [
+   "A",
+   "B",
+   "C",
+   "D"
+  ],
+  "o": [
+   [
+    "○",
+    "○",
+    "×",
+    "○"
+   ],
+   [
+    "×",
+    "×",
+    "×",
+    "○"
+   ],
+   [
+    "○",
+    "×",
+    "×",
+    "○"
+   ],
+   [
+    "○",
+    "○",
+    "×",
+    "×"
+   ],
+   [
+    "×",
+    "○",
+    "×",
+    "○"
+   ]
+  ],
+  "a": 0,
+  "e": "障害者差別解消法では、合理的配慮の不提供も差別にあたるとされ、2024年4月からは事業者にも合理的配慮の提供が義務化されました。特別支援学校は学校教育法第1条の学校（一条校）に含まれるので、Dは正しい記述です。",
+  "items": [
+   "A　1994年に採択されたサラマンカ声明は、インクルーシブ教育の考え方を国際的に打ち出した。",
+   "B　日本は、2014（平成26）年に「障害者の権利に関する条約」を批准した。",
+   "C　障害者差別解消法では、合理的配慮を提供しないことは差別に当たらないとされている。",
+   "D　特別支援学校は、学校教育法第1条に定める学校に含まれる。"
+  ]
+ }
+];
+
+</script>
+<script>
+(function () {
+  const STORE_KEY = "hoikushi-kyouikugenri-v1";
+  const DOC_ID = "kyouiku-genri";
+  const KEYS4 = ["A", "B", "C", "D"];
+  const ALL = QUESTIONS.concat(EXAM_QUESTIONS);
+  const catById = Object.fromEntries(CATEGORIES.map(c => [c.id, c]));
+  const isExam = q => q.type === "combo" || q.fixed;
+
+  // ---------- local storage (safe) ----------
+  let stats = {}, resetAt = 0;
+  try {
+    const raw = JSON.parse(localStorage.getItem(STORE_KEY) || "{}") || {};
+    if (raw.stats) { stats = raw.stats; resetAt = raw.resetAt || 0; }
+    else stats = raw; // 旧形式（初版）からの移行
+  } catch (e) { stats = {}; }
+  function saveLocal() { try { localStorage.setItem(STORE_KEY, JSON.stringify({ stats, resetAt })); } catch (e) {} }
+
+  function merge(a, b, cutoff) {
+    const out = {};
+    new Set([...Object.keys(a), ...Object.keys(b)]).forEach(id => {
+      const x = a[id], y = b[id];
+      let r;
+      if (!x) r = y; else if (!y) r = x;
+      else {
+        const nw = (x.t || 0) >= (y.t || 0) ? x : y;
+        r = { c: Math.max(x.c || 0, y.c || 0), w: Math.max(x.w || 0, y.w || 0), last: nw.last, t: nw.t || 0 };
+      }
+      if (r && (cutoff === 0 || (r.t || 0) > cutoff)) out[id] = r;
+    });
+    return out;
+  }
+
+  function record(id, ok) {
+    const s = Object.assign({ c: 0, w: 0, last: null }, stats[id]);
+    ok ? s.c++ : s.w++;
+    s.last = ok; s.t = Date.now();
+    stats[id] = s;
+    saveLocal(); schedulePush();
+  }
+  const isWeak = q => stats[q.id] && stats[q.id].last === false;
+
+  // ---------- cloud sync ----------
+  let docRef = null, syncState = "connecting", writing = false, dirty = false, pushTimer = null;
+  function setSync(s) { syncState = s; const el = document.getElementById("sync"); if (el) el.outerHTML = syncBadge(); }
+  function syncBadge() {
+    const m = {
+      connecting: ["", "同期を確認中…"],
+      on: ["on", "端末間で同期しています"],
+      local: ["", "このブラウザに保存（他の端末へは「記録の引き継ぎ」で）"],
+      err: ["err", "同期できません（このブラウザに保存中）"]
+    }[syncState];
+    return `<span class="sync ${m[0]}" id="sync"><i></i>${m[1]}</span>`;
+  }
+  function schedulePush() {
+    if (!docRef) return;
+    clearTimeout(pushTimer);
+    pushTimer = setTimeout(push, 1500);
+  }
+  async function push() {
+    if (!docRef) return;
+    if (writing) { dirty = true; return; }
+    writing = true;
+    try {
+      await docRef.set({ stats: JSON.parse(JSON.stringify(stats)), resetAt, updatedAt: Date.now() });
+      if (syncState !== "on") setSync("on");
+    } catch (e) {
+      if (e && e.code === "unavailable") { setTimeout(push, 1500 + Math.random() * 1500); }
+      else { setSync("err"); docRef = null; }
+    } finally {
+      writing = false;
+      if (dirty) { dirty = false; push(); }
+    }
+  }
+  function absorb(body) {
+    if (!body) return false;
+    const rr = body.resetAt || 0;
+    if (rr > resetAt) resetAt = rr;
+    const before = JSON.stringify(stats);
+    stats = merge(stats, body.stats || {}, resetAt);
+    saveLocal();
+    return JSON.stringify(stats) !== before;
+  }
+  (async function connect() {
+    for (let i = 0; i < 25 && !(window.claude && window.claude.use); i++) await new Promise(r => setTimeout(r, 200));
+    if (!window.claude || !window.claude.use) { setSync("local"); return; }
+    try {
+      const [db, user] = await Promise.all([window.claude.use("db"), window.claude.use("user")]);
+      const uid = db && user ? await user.id() : null;
+      if (!uid) { setSync("local"); return; }
+      const ref = db.collection("data/users/" + uid).doc(DOC_ID);
+      const timer = setTimeout(() => { if (syncState === "connecting") setSync("err"); }, 10000);
+      const snap = await ref.get();
+      clearTimeout(timer);
+      docRef = ref;
+      const remote = snap.exists ? snap.data() : null;
+      const changed = absorb(remote);
+      const remoteStr = JSON.stringify((remote && remote.stats) || {});
+      if (!remote || remoteStr !== JSON.stringify(stats) || (remote.resetAt || 0) !== resetAt) await push();
+      setSync("on");
+      if (changed && !session) renderHome();
+      ref.onSnapshot(s => {
+        if (!s.exists || s.metadata.hasPendingWrites) return;
+        if (absorb(s.data()) && !session) renderHome();
+      }, () => { setSync("err"); docRef = null; });
+    } catch (e) { setSync(syncState === "connecting" ? "local" : "err"); docRef = null; }
+  })();
+
+  // ---------- helpers ----------
+  const $app = document.getElementById("app");
+  const shuffle = arr => { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const esc = s => String(s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
+  const optText = (q, i) => q.type === "combo" ? q.cols.map((c, k) => `${c}：${q.o[i][k]}`).join("　") : q.o[i];
+
+  function summary(qs) {
+    let tried = 0, mastered = 0, c = 0, w = 0;
+    qs.forEach(q => { const s = stats[q.id]; if (s) { tried++; c += s.c; w += s.w; if (s.last) mastered++; } });
+    return { total: qs.length, tried, mastered, rate: (c + w) ? Math.round(c / (c + w) * 100) : null };
+  }
+
+  // ---------- session ----------
+  let session = null;
+  function start(title, pool) {
+    if (!pool.length) return;
+    session = {
+      title,
+      items: shuffle(pool).map(q => {
+        if (isExam(q)) return { q, order: q.o.map((_, i) => i), answer: q.a, exam: true };
+        const order = shuffle(q.o.map((_, i) => i));
+        return { q, order, answer: order.indexOf(q.a), exam: false };
+      }),
+      i: 0, results: []
+    };
+    renderQuestion();
+  }
+  const label = (it, k) => it.exam ? String(k + 1) : KEYS4[k];
+
+  // ---------- views ----------
+  function renderHome() {
+    session = null;
+    const all = summary(ALL);
+    const exam = ALL.filter(isExam);
+    const weakCount = ALL.filter(isWeak).length;
+    $app.innerHTML = `
+      <div class="brand"><span class="badge">保育士試験対策</span></div>
+      <h1>教育原理 問題集</h1>
+      <p class="lead">全${ALL.length}問（一問一答${QUESTIONS.length}問＋本番形式${exam.length}問）・5分野</p>
+
+      <div class="overall">
+        <div class="stat"><div class="num">${all.tried}<small style="font-size:14px;color:var(--sub)">/${all.total}</small></div><div class="lbl">挑戦した問題</div></div>
+        <div class="stat"><div class="num">${all.rate === null ? "–" : all.rate + "%"}</div><div class="lbl">通算正答率</div></div>
+        <div class="stat"><div class="num" style="color:${weakCount ? "var(--wrong)" : "inherit"}">${weakCount}</div><div class="lbl">要復習</div></div>
+      </div>
+
+      <div class="modes">
+        <button class="mode primary" data-mode="exam"><span class="t">本番形式 10問</span><span class="d">組合せ・5択問題から出題（試験と同じ10問）</span></button>
+        <button class="mode" data-mode="random"><span class="t">ランダム10問</span><span class="d">全問題からおまかせ</span></button>
+        <button class="mode" data-mode="weak" ${weakCount ? "" : "disabled"}><span class="t">間違えた問題を復習</span><span class="d">${weakCount ? weakCount + "問（正解すると外れます）" : "まだありません"}</span></button>
+        <button class="mode" data-mode="unseen" ${all.tried < all.total ? "" : "disabled"}><span class="t">未挑戦の問題</span><span class="d">あと${all.total - all.tried}問</span></button>
+      </div>
+
+      <h2 class="section-title">分野別に解く</h2>
+      <div class="cats">
+        ${CATEGORIES.map(c => {
+          const qs = ALL.filter(q => q.c === c.id);
+          const s = summary(qs);
+          const ex = qs.filter(isExam).length;
+          const pct = Math.round(s.mastered / s.total * 100);
+          return `<button class="cat" data-cat="${c.id}">
+            <span class="ic">${c.icon}</span>
+            <span>
+              <span class="name">${esc(c.name)}</span>
+              <span class="meta">${s.total}問（うち本番形式${ex}）　直近正解 ${s.mastered}問</span>
+              <div class="bar"><i style="width:${pct}%"></i></div>
+            </span>
+            <span class="rate">${s.rate === null ? "<small>未挑戦</small>" : s.rate + "<small>%</small>"}</span>
+          </button>`;
+        }).join("")}
+      </div>
+
+      <div class="install" id="install"><b style="color:var(--ink)">📱 ホーム画面に追加するとアプリのように使えます</b><br>Safariの共有ボタン（□↑）→「ホーム画面に追加」</div>
+      <div class="foot">
+        ${syncBadge()}
+        <span class="links"><button class="link-btn" id="xfer-open">記録の引き継ぎ</button><button class="link-btn" id="reset">記録をリセット</button></span>
+      </div>`;
+
+    $app.querySelectorAll("[data-mode]").forEach(b => b.onclick = () => {
+      const m = b.dataset.mode;
+      if (m === "exam") start("本番形式 10問", shuffle(exam).slice(0, 10));
+      if (m === "random") start("ランダム10問", shuffle(ALL).slice(0, 10));
+      if (m === "weak") start("復習", ALL.filter(isWeak));
+      if (m === "unseen") start("未挑戦の問題", ALL.filter(q => !stats[q.id]));
+    });
+    $app.querySelectorAll("[data-cat]").forEach(b => b.onclick = () => {
+      const c = catById[b.dataset.cat];
+      start(c.name, ALL.filter(q => q.c === c.id));
+    });
+    document.getElementById("reset").onclick = () => document.getElementById("modal").classList.add("show");
+    document.getElementById("xfer-open").onclick = openXfer;
+    try {
+      const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+      const standalone = window.navigator.standalone === true || matchMedia("(display-mode: standalone)").matches;
+      if (ios && !standalone && window.top === window.self) document.getElementById("install").classList.add("show");
+    } catch (e) {}
+    window.scrollTo(0, 0);
+  }
+
+  function optionsHtml(it) {
+    const q = it.q;
+    if (q.type === "combo") {
+      const marks = q.o[0].every(v => v === "○" || v === "×") ? " marks" : "";
+      return `<div class="combo-head" style="--n:${q.cols.length}"><span></span>${q.cols.map(c => `<span>${c}</span>`).join("")}<span></span></div>
+        <div class="opts">${it.order.map((oi, k) => `
+          <button class="opt combo${marks}" style="--n:${q.cols.length}" data-k="${k}">
+            <span class="k">${k + 1}</span>${q.o[oi].map(v => `<span class="v">${esc(v)}</span>`).join("")}<span class="mk"></span>
+          </button>`).join("")}</div>`;
+    }
+    return `<div class="opts">${it.order.map((oi, k) => `
+      <button class="opt" data-k="${k}">
+        <span class="k">${label(it, k)}</span><span>${esc(q.o[oi])}</span><span class="mk"></span>
+      </button>`).join("")}</div>`;
+  }
+
+  function renderQuestion() {
+    const it = session.items[session.i];
+    const q = it.q;
+    const n = session.items.length;
+    $app.innerHTML = `
+      <div class="topbar">
+        <button class="back" id="quit">← やめる</button>
+        <div class="progress"><i style="width:${session.i / n * 100}%"></i></div>
+        <span class="count">${session.i + 1} / ${n}</span>
+      </div>
+      <div class="qcard">
+        <div class="qcat">${catById[q.c].icon} ${esc(catById[q.c].name)}${it.exam ? '<span class="tag-exam">本番形式</span>' : ""}</div>
+        <p class="qtext">${esc(q.q)}</p>
+        ${q.items ? `<div class="stmts">${q.items.map(s => `<div>${esc(s)}</div>`).join("")}</div>` : ""}
+        ${q.pool ? `<div class="stmts pool">${q.pool.map(s => `<div>${esc(s)}</div>`).join("")}</div>` : ""}
+        ${optionsHtml(it)}
+        <div class="explain" id="explain"></div>
+        <button class="next" id="next">${session.i + 1 < n ? "次の問題へ" : "結果を見る"}</button>
+      </div>
+      <p class="hint">キーボード：${it.exam ? "1〜5" : "A〜D（1〜4）"}で回答／Enterで次へ</p>`;
+
+    document.getElementById("quit").onclick = () => session.results.length ? renderResult() : renderHome();
+    $app.querySelectorAll(".opt").forEach(b => b.onclick = () => answer(+b.dataset.k));
+    document.getElementById("next").onclick = next;
+    window.scrollTo(0, 0);
+  }
+
+  function answer(k) {
+    const it = session.items[session.i];
+    if (it.chosen !== undefined || k >= it.order.length) return;
+    it.chosen = k;
+    const ok = k === it.answer;
+    record(it.q.id, ok);
+    session.results.push({ q: it.q, ok });
+
+    $app.querySelectorAll(".opt").forEach((b, idx) => {
+      b.disabled = true;
+      if (idx === it.answer) { b.classList.add("correct"); b.querySelector(".mk").textContent = "○"; }
+      else if (idx === k) { b.classList.add("wrong"); b.querySelector(".mk").textContent = "×"; }
+      else b.classList.add("dim");
+    });
+    const ex = document.getElementById("explain");
+    ex.className = "explain show " + (ok ? "ok" : "ng");
+    ex.innerHTML = `<div class="verdict">${ok ? "正解！" : "不正解… 正解は " + label(it, it.answer)}</div>${esc(it.q.e)}`;
+    const nb = document.getElementById("next");
+    nb.classList.add("show");
+    setTimeout(() => { try { nb.scrollIntoView({ behavior: "smooth", block: "nearest" }); } catch (e) {} }, 60);
+    document.querySelector(".progress > i").style.width = (session.results.length / session.items.length * 100) + "%";
+  }
+
+  function next() {
+    if (session.i + 1 < session.items.length) { session.i++; renderQuestion(); }
+    else renderResult();
+  }
+
+  function renderResult() {
+    const r = session.results;
+    const okN = r.filter(x => x.ok).length;
+    const pct = r.length ? Math.round(okN / r.length * 100) : 0;
+    const missed = r.filter(x => !x.ok);
+    const C = 2 * Math.PI * 60;
+    const msg = pct >= 90 ? ["すばらしい！", "この調子で他の分野も固めましょう。"]
+              : pct >= 60 ? ["合格ラインです", "保育士試験の合格基準は各科目6割以上。間違えた問題を見直してさらに上へ。"]
+              : ["もう一歩！", "解説を読んで、間違えた問題を復習しましょう。"];
+    $app.innerHTML = `
+      <div class="result-hero">
+        <div class="ring">
+          <svg width="140" height="140" viewBox="0 0 140 140">
+            <circle cx="70" cy="70" r="60" fill="none" stroke="var(--line)" stroke-width="12"/>
+            <circle cx="70" cy="70" r="60" fill="none" stroke="${pct >= 60 ? "var(--accent)" : "var(--wrong)"}" stroke-width="12"
+              stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - pct / 100)}"/>
+          </svg>
+          <div class="val"><div><b>${pct}%</b><span>${okN} / ${r.length} 問正解</span></div></div>
+        </div>
+        <p class="msg">${msg[0]}</p>
+        <p class="submsg">${esc(session.title)}　${msg[1]}</p>
+      </div>
+      ${missed.length ? `<h2 class="section-title">間違えた問題（${missed.length}問）</h2>
+        <div class="missed">${missed.map(x => `
+          <div class="missed-item">${esc(x.q.q.split("\n")[0])}<div class="ans">正解：${isExam(x.q) ? (x.q.a + 1) + "　" : ""}${esc(optText(x.q, x.q.a))}</div></div>`).join("")}
+        </div>` : ""}
+      <div class="actions">
+        <button class="btn" id="home">トップへ</button>
+        <button class="btn dark" id="retry">${missed.length ? "間違えた問題を解き直す" : "もう一度"}</button>
+      </div>`;
+    const title = session.title;
+    const pool = missed.length ? missed.map(x => x.q) : session.items.map(x => x.q);
+    document.getElementById("home").onclick = renderHome;
+    document.getElementById("retry").onclick = () => start(missed.length ? "解き直し" : title, pool);
+    window.scrollTo(0, 0);
+  }
+
+  // ---------- keyboard ----------
+  document.addEventListener("keydown", e => {
+    if (!session || !document.querySelector(".qcard")) return;
+    const it = session.items[session.i];
+    const map = it.exam ? { "1": 0, "2": 1, "3": 2, "4": 3, "5": 4 } : { a: 0, b: 1, c: 2, d: 3, "1": 0, "2": 1, "3": 2, "4": 3 };
+    const k = map[e.key.toLowerCase()];
+    if (k !== undefined) answer(k);
+    else if (e.key === "Enter" && it.chosen !== undefined) next();
+  });
+
+
+  // ---------- transfer code (works without login) ----------
+  const CODE_PREFIX = "HKG1:";
+  function encode() {
+    const json = JSON.stringify({ s: stats, r: resetAt });
+    return CODE_PREFIX + btoa(unescape(encodeURIComponent(json)));
+  }
+  function decode(code) {
+    code = code.replace(/\s+/g, "");
+    if (!code.startsWith(CODE_PREFIX)) throw new Error("prefix");
+    const obj = JSON.parse(decodeURIComponent(escape(atob(code.slice(CODE_PREFIX.length)))));
+    if (!obj || typeof obj.s !== "object") throw new Error("shape");
+    return obj;
+  }
+  const xfer = document.getElementById("xfer");
+  function openXfer() {
+    document.getElementById("xfer-out").value = encode();
+    document.getElementById("xfer-in").value = "";
+    document.getElementById("xfer-msg").textContent = "";
+    document.getElementById("xfer-copy").textContent = "コードをコピー";
+    xfer.classList.add("show");
+  }
+  document.getElementById("xfer-close").onclick = () => { xfer.classList.remove("show"); renderHome(); };
+  document.getElementById("xfer-copy").onclick = async () => {
+    const out = document.getElementById("xfer-out");
+    const btn = document.getElementById("xfer-copy");
+    try { await navigator.clipboard.writeText(out.value); btn.textContent = "コピーしました ✓"; }
+    catch (e) { out.focus(); out.select(); try { out.setSelectionRange(0, out.value.length); } catch (_) {} btn.textContent = "選択しました。長押し（Ctrl+C）でコピー"; }
+  };
+  document.getElementById("xfer-load").onclick = () => {
+    const msg = document.getElementById("xfer-msg");
+    try {
+      const obj = decode(document.getElementById("xfer-in").value);
+      const n0 = Object.keys(stats).length;
+      if ((obj.r || 0) > resetAt) resetAt = obj.r;
+      const clean = {};
+      Object.entries(obj.s).forEach(([id, v]) => {
+        if (v && typeof v === "object") clean[id] = { c: +v.c || 0, w: +v.w || 0, last: v.last === true ? true : v.last === false ? false : null, t: +v.t || 0 };
+      });
+      stats = merge(stats, clean, resetAt);
+      saveLocal(); schedulePush();
+      msg.style.color = "var(--accent)";
+      msg.textContent = `読み込みました（記録のある問題：${n0}問 → ${Object.keys(stats).length}問）`;
+      document.getElementById("xfer-out").value = encode();
+    } catch (e) {
+      msg.style.color = "var(--wrong)";
+      msg.textContent = "コードを読み取れませんでした。全体をコピーできているか確認してください。";
+    }
+  };
+
+  // ---------- reset dialog ----------
+  const modal = document.getElementById("modal");
+  document.getElementById("modal-cancel").onclick = () => modal.classList.remove("show");
+  document.getElementById("modal-ok").onclick = () => {
+    stats = {}; resetAt = Date.now(); saveLocal(); push();
+    modal.classList.remove("show"); renderHome();
+  };
+
+  renderHome();
+})();
+
+</script>
+</body>
+</html>
