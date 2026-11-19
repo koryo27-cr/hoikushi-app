@@ -9,7 +9,7 @@
   const subjOfQ = {};
   SUBJ.forEach(s => s.questions.forEach(q => { subjOfQ[q.id] = s.id; }));
   const ALL = SUBJ.flatMap(s => s.questions);
-  const isExam = q => q.type === "combo" || q.fixed;
+  const isExam = q => q.type === "combo" || q.type === "multi" || q.fixed;
 
   // ---------- local storage (safe) ----------
   let stats = {}, resetAt = 0, resets = {};
@@ -114,7 +114,8 @@
   const $app = document.getElementById("app");
   const shuffle = arr => { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
   const esc = s => String(s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
-  const optText = (q, i) => q.type === "combo" ? q.cols.map((c, k) => `${c}：${q.o[i][k]}`).join("　") : q.o[i];
+  const optText = (q, i) => q.type === "multi" ? q.a.map(j => `${j + 1}. ${q.o[j]}`).join(" ／ ") : q.type === "combo" ? q.cols.map((c, k) => `${c}：${q.o[i][k]}`).join("　") : q.o[i];
+  const ansLabel = q => q.type === "multi" ? q.a.map(j => j + 1).join("・") : isExam(q) ? String(q.a + 1) : "";
   function summary(qs) {
     let tried = 0, mastered = 0, c = 0, w = 0;
     qs.forEach(q => { const s = stats[q.id]; if (s) { tried++; c += s.c; w += s.w; if (s.last) mastered++; } });
@@ -148,6 +149,7 @@
     session = {
       title, back: current ? current.id : null,
       items: shuffle(pool).map(q => {
+        if (q.type === "multi") return { q, order: q.o.map((_, i) => i), answer: q.a, exam: true, multi: true, sel: [] };
         if (isExam(q)) return { q, order: q.o.map((_, i) => i), answer: q.a, exam: true };
         const order = shuffle(q.o.map((_, i) => i));
         return { q, order, answer: order.indexOf(q.a), exam: false };
@@ -284,6 +286,12 @@
             <span class="k">${k + 1}</span>${q.o[oi].map(v => `<span class="v">${esc(v)}</span>`).join("")}<span class="mk"></span>
           </button>`).join("")}</div>`;
     }
+    if (it.multi) {
+      return `<div class="need">正答数：<b>${q.a.length}つ</b>（${q.a.length}つ選んでから「回答する」）</div>
+        <div class="opts">${it.order.map((oi, k) => `
+        <button class="opt multi" data-k="${k}"><span class="k">${k + 1}</span><span>${esc(q.o[oi])}</span><span class="mk"></span></button>`).join("")}</div>
+        <button class="submit" id="submit" disabled>回答する（0 / ${q.a.length}）</button>`;
+    }
     return `<div class="opts">${it.order.map((oi, k) => `
       <button class="opt" data-k="${k}">
         <span class="k">${label(it, k)}</span><span>${esc(q.o[oi])}</span><span class="mk"></span>
@@ -311,17 +319,47 @@
         <div class="explain" id="explain"></div>
         <button class="next" id="next">${session.i + 1 < n ? "次の問題へ" : "結果を見る"}</button>
       </div>
-      <p class="hint">キーボード：${it.exam ? "1〜5" : "A〜D（1〜4）"}で回答／Enterで次へ</p>`;
+      <p class="hint">キーボード：${it.multi ? "1〜5で選択／Enterで回答・次へ" : (it.exam ? "1〜5" : "A〜D（1〜4）") + "で回答／Enterで次へ"}</p>`;
     document.getElementById("quit").onclick = () => session.results.length ? renderResult() : leave();
     $app.querySelectorAll(".opt").forEach(b => b.onclick = () => answer(+b.dataset.k));
+    const sb = document.getElementById("submit");
+    if (sb) sb.onclick = submitMulti;
     document.getElementById("next").onclick = next;
     window.scrollTo(0, 0);
+  }
+  function toggleMulti(it, k) {
+    if (it.chosen !== undefined) return;
+    const i = it.sel.indexOf(k);
+    if (i >= 0) it.sel.splice(i, 1); else it.sel.push(k);
+    $app.querySelectorAll(".opt").forEach((b, idx) => b.classList.toggle("sel", it.sel.includes(idx)));
+    const sb = document.getElementById("submit"), need = it.answer.length;
+    sb.disabled = it.sel.length !== need;
+    sb.textContent = it.sel.length > need ? `選びすぎです（${it.sel.length} / ${need}）` : `回答する（${it.sel.length} / ${need}）`;
+  }
+  function submitMulti() {
+    const it = session.items[session.i];
+    if (it.chosen !== undefined || it.sel.length !== it.answer.length) return;
+    it.chosen = it.sel.slice();
+    const ok = it.sel.length === it.answer.length && it.sel.every(k => it.answer.includes(k));
+    record(it.q.id, ok);
+    session.results.push({ q: it.q, ok });
+    $app.querySelectorAll(".opt").forEach((b, idx) => {
+      b.disabled = true; b.classList.remove("sel");
+      const isAns = it.answer.includes(idx), picked = it.sel.includes(idx);
+      if (isAns) { b.classList.add("correct"); b.querySelector(".mk").textContent = picked ? "○" : "△"; }
+      else if (picked) { b.classList.add("wrong"); b.querySelector(".mk").textContent = "×"; }
+      else b.classList.add("dim");
+    });
+    document.getElementById("submit").style.display = "none";
+    showExplain(it, ok, ansLabel(it.q));
   }
   function leave() { const b = session && session.back; session = null; b ? renderSubject(subjById[b]) : renderTop(); }
 
   function answer(k) {
     const it = session.items[session.i];
-    if (it.chosen !== undefined || k >= it.order.length) return;
+    if (k >= it.order.length) return;
+    if (it.multi) return toggleMulti(it, k);
+    if (it.chosen !== undefined) return;
     it.chosen = k;
     const ok = k === it.answer;
     record(it.q.id, ok);
@@ -332,9 +370,12 @@
       else if (idx === k) { b.classList.add("wrong"); b.querySelector(".mk").textContent = "×"; }
       else b.classList.add("dim");
     });
+    showExplain(it, ok, label(it, it.answer));
+  }
+  function showExplain(it, ok, ansText) {
     const ex = document.getElementById("explain");
     ex.className = "explain show " + (ok ? "ok" : "ng");
-    ex.innerHTML = `<div class="verdict">${ok ? "正解！" : "不正解… 正解は " + label(it, it.answer)}</div>${esc(it.q.e)}`;
+    ex.innerHTML = `<div class="verdict">${ok ? "正解！" : "不正解… 正解は " + ansText}</div>${esc(it.q.e)}`;
     const nb = document.getElementById("next");
     nb.classList.add("show");
     setTimeout(() => { try { nb.scrollIntoView({ behavior: "smooth", block: "nearest" }); } catch (e) {} }, 60);
@@ -366,7 +407,7 @@
       </div>
       ${missed.length ? `<h2 class="section-title">間違えた問題（${missed.length}問）</h2>
         <div class="missed">${missed.map(x => `
-          <div class="missed-item">${esc(x.q.q.split("\n")[0])}<div class="ans">正解：${isExam(x.q) ? (x.q.a + 1) + "　" : ""}${esc(optText(x.q, x.q.a))}</div></div>`).join("")}
+          <div class="missed-item">${esc(x.q.q.split("\n")[0])}<div class="ans">正解：${x.q.type === "multi" ? "" : (isExam(x.q) ? ansLabel(x.q) + "　" : "")}${esc(optText(x.q, x.q.a))}</div></div>`).join("")}
         </div>` : ""}
       <div class="actions">
         <button class="btn" id="home">${session.back ? "科目のトップへ" : "科目一覧へ"}</button>
@@ -387,6 +428,7 @@
     const k = map[e.key.toLowerCase()];
     if (k !== undefined) answer(k);
     else if (e.key === "Enter" && it.chosen !== undefined) next();
+    else if (e.key === "Enter" && it.multi) submitMulti();
   });
 
   // ---------- transfer code (works without login) ----------
