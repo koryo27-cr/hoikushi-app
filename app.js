@@ -541,7 +541,10 @@
   function route() {
     if (mock) { stopMock(); mock = null; }
     const raw = (location.hash || "").replace(/^#/, "");
-    if (/^r=/.test(raw)) return linkImport(raw.slice(2)); // 生徒から届いたレポートのリンク
+    if (/^r=/.test(raw)) { // 生徒から届いたレポートのリンク（指導者ページが開いているときだけ取り込む）
+      if (!tKey) { pendingReport = raw.slice(2); replaceHash("teacher"); return renderTLock(); }
+      return linkImport(raw.slice(2));
+    }
     if (/^f=/.test(raw)) { pendingReply = raw.slice(2); replaceHash("send"); return renderSend(); } // 先生からの返信のリンク
     const [id, sub, third] = raw.split("/");
     const S = subjById[id];
@@ -554,7 +557,8 @@
     else if (id === "jitsugi") renderJitsugi();
     else if (id === "send") renderSend();
     else if (id === "teacher") {
-      if (sub === "s" && tch.sts[third]) renderTStudent(third);
+      if (!tKey) renderTLock();
+      else if (sub === "s" && tch.sts[third]) renderTStudent(third);
       else if (sub === "print" && tch.sts[third]) renderTPrint(third);
       else if (sub === "class") renderTClass();
       else if (sub === "all") renderTAll();
@@ -618,7 +622,7 @@
   // ---------- views ----------
   function footer() {
     return `<div class="install" id="install"><b style="color:var(--ink)">📱 ホーム画面に追加するとアプリのように使えます</b><br>Safariの共有ボタン（□↑）→「ホーム画面に追加」</div>
-      <div class="foot">${syncBadge()}<span class="links"><button class="link-btn" id="xfer-open">記録の引き継ぎ</button><button class="link-btn" id="reset">${current ? "この科目の記録をリセット" : "すべての記録をリセット"}</button></span></div>`;
+      <div class="foot">${syncBadge()}<span class="links"><button class="link-btn" id="xfer-open">記録の引き継ぎ</button><button class="link-btn" id="to-teacher">指導者ページ（先生用）</button><button class="link-btn" id="reset">${current ? "この科目の記録をリセット" : "すべての記録をリセット"}</button></span></div>`;
   }
   function wireFooter() {
     document.getElementById("reset").onclick = () => {
@@ -629,6 +633,7 @@
       document.getElementById("modal").classList.add("show");
     };
     document.getElementById("xfer-open").onclick = openXfer;
+    document.getElementById("to-teacher").onclick = () => go("teacher");
     try {
       const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
       const standalone = window.navigator.standalone === true || matchMedia("(display-mode: standalone)").matches;
@@ -690,7 +695,6 @@
         <button class="tool" data-go="cram"><span>📘</span><b>間違えた問題の整理</b><small>読むだけの復習</small></button>
         <button class="tool" data-go="jitsugi"><span>🎹</span><b>実技試験の準備</b><small>音楽・造形・言語</small></button>
         <button class="tool" data-go="send"><span>✉️</span><b>先生に送る</b><small>学習レポート・先生からの返信</small></button>
-        <button class="tool" data-go="teacher"><span>👩‍🏫</span><b>指導者ページ</b><small>先生用：生徒の状況とフィードバック</small></button>
       </div>
       ${footer()}`;
     if (plan) wireMenu(plan); else wireAsgBox();
@@ -1990,7 +1994,7 @@
   //         → コメント・課題・受験科目の変更を返信コード（HKT1:）で返す
   //   生徒：返信コードを貼る → コメントはトップに、課題は今日のメニューに入る
   // =====================================================================
-  const REP_PREFIX = "HKR1:", REPLY_PREFIX = "HKT1:", TBK_PREFIX = "HKB1:";
+  const REP_PREFIX = "HKR1:", REPLY_PREFIX = "HKT2:", OLD_REPLY_PREFIX = "HKT1:", TBK_PREFIX = "HKB1:";
   const TEACHER_KEY = "hoikushi-teacher-v1";
   const SHORT = { "hoiku-genri": "原理", "kyouiku-genri": "教育", "shakaiteki-yougo": "養護", "kodomo-katei-fukushi": "家福", "shakai-fukushi": "社福", "hoiku-shinri": "心理", "kodomo-hoken": "保健", "shoku-eiyou": "栄養", "jisshu-riron": "実習" };
   const SJ_CODE = { now: "n", later: "l", pass: "p" }, SJ_FROM = { n: "now", l: "later", p: "pass" };
@@ -2206,15 +2210,18 @@
   async function readReplies(text) {
     ensureMe();
     const codes = findCodes(REPLY_PREFIX, text), res = [];
+    findCodes(OLD_REPLY_PREFIX, text).forEach(() => res.push({ st: "unsigned" }));
     for (const [k, d] of codes) {
       try {
-        const o = await unpackOne(k, d);
-        if (!o || !o.id) throw new Error("shape");
+        if (!hasCrypto()) { res.push({ st: "nocrypto" }); continue; }
+        const w = await unpackOne(k, d), o = await verifyReply(w);
+        if (!o) { res.push({ st: "unsigned" }); continue; }
+        if (!o.id) throw new Error("shape");
         const st = tf.imp[o.id] ? "done" : (o.to === "*" || o.to === me.id) ? "ok" : "other";
         res.push({ o, st });
       } catch (e) { res.push({ st: e && e.message === "old" ? "old" : "bad" }); }
     }
-    return { codes: codes.length, res };
+    return { codes: res.length, res };
   }
 
   // ---------- 生徒：先生に送る画面 ----------
@@ -2252,7 +2259,7 @@
       </div>
       <h2 class="section-title" style="margin-top:22px">② 先生からの返信を取り込む</h2>
       <div class="form" style="padding-top:12px">
-        <textarea id="s-in" class="fi codebox" placeholder="先生から届いた返信コード（HKT1:…）を貼り付け">${esc(pendingReply)}</textarea>
+        <textarea id="s-in" class="fi codebox" placeholder="先生から届いた返信コード（HKT2:…）を貼り付け">${esc(pendingReply)}</textarea>
         <div id="s-inres"></div>
         <button class="btn dark wide" id="s-read" style="margin-top:8px">読み取る</button>
       </div>
@@ -2279,10 +2286,10 @@
     readBtn.onclick = async () => {
       const box = document.getElementById("s-inres"), txt = document.getElementById("s-in").value;
       const { codes, res } = await readReplies(txt);
-      if (!codes) { box.innerHTML = `<p class="fh" style="color:var(--wrong)">返信コード（HKT1:で始まるもの）が見つかりません。全体をコピーできているか確認してください。</p>`; return; }
+      if (!codes) { box.innerHTML = `<p class="fh" style="color:var(--wrong)">返信コード（HKT2:で始まるもの）が見つかりません。全体をコピーできているか確認してください。</p>`; return; }
       const good = res.filter(x => x.st === "ok");
       box.innerHTML = res.map(x => x.st === "ok" ? `<div class="rprev"><b>${esc(x.o.fr || "先生")}からの返信（${fmtMD(x.o.t)}${x.o.to === "*" ? "・クラス全員あて" : ""}）</b><span>${replySummary(x.o).map(esc).join("／") || "内容なし"}</span>${x.o.c ? `<div class="fbt">${nl(x.o.c)}</div>` : ""}${(x.o.a || []).map(a => `<div class="rpa">□ ${esc(asgLabel(a))}${asgNote(a) ? `「${esc(asgNote(a))}」` : ""}</div>`).join("")}</div>`
-        : `<p class="fh" style="color:var(--wrong)">${x.st === "done" ? "この返信はもう取り込んであります。" : x.st === "other" ? "別の生徒あての返信です（ニックネームのちがう人に届いたものかもしれません）。" : x.st === "old" ? "このブラウザでは読み取れません。Safari・Chromeを最新にしてください。" : "読み取れないコードがありました。"}</p>`).join("")
+        : `<p class="fh" style="color:var(--wrong)">${x.st === "done" ? "この返信はもう取り込んであります。" : x.st === "other" ? "別の生徒あての返信です（ニックネームのちがう人に届いたものかもしれません）。" : x.st === "old" || x.st === "nocrypto" ? "このブラウザでは読み取れません。Safari・Chromeを最新にしてください。" : x.st === "unsigned" ? "先生の返信として確かめられないコードです（指導者ページで作られたものではないか、古い形式です）。先生にもう一度作ってもらってください。" : "読み取れないコードがありました。"}</p>`).join("")
         + (good.length ? `<button class="btn dark wide" id="s-apply" style="margin-top:8px;background:var(--accent);border-color:var(--accent)">取り込む</button>${good.some(x => x.o.sj || x.o.wd != null || x.o.we != null) ? `<p class="fh">受験科目・時間の変更は学習プランに反映され、変更履歴に「先生が変更」と残ります。あとから自分で設定を変えることもできます。</p>` : ""}` : "");
       readBtn.style.display = good.length ? "none" : "";
       const ap = document.getElementById("s-apply");
@@ -2291,6 +2298,102 @@
     if (pendingReply) readBtn.onclick();
     wireFooter();
     document.title = "先生に送る｜保育士資格試験問題集";
+    window.scrollTo(0, 0);
+  }
+
+  // ---------- 指導者ページの鍵（パスコード）と返信の署名 ----------
+  // teacher_keys.js：署名用の秘密鍵をパスコードごとに暗号化したもの（tools/teacher_keys.mjs で生成）。
+  // パスコードで秘密鍵を取り出せたときだけ指導者ページが開き、返信コードに署名できる。
+  // 生徒のアプリは公開鍵で署名を確かめるので、パスコードを知らない人が返信を作っても取り込めない。
+  const TK = window.TEACHER_KEYS && window.TEACHER_KEYS.pub ? window.TEACHER_KEYS : null;
+  const UNLOCK_KEY = "hoikushi-teacher-unlock";
+  const hasCrypto = () => !!(window.crypto && crypto.subtle);
+  const normPass = p => String(p).normalize("NFKC").replace(/[\s-]/g, "").toLowerCase();
+  let tKey = null, tLabel = "", pendingReport = "";
+  const importSign = pkcs8 => crypto.subtle.importKey("pkcs8", pkcs8, { name: "ECDSA", namedCurve: "P-256" }, false, ["sign"]);
+  async function unlockTeacher(pass, remember) {
+    if (!TK || !hasCrypto()) return false;
+    const enc = new TextEncoder();
+    for (const L of TK.locks) {
+      try {
+        const base = await crypto.subtle.importKey("raw", enc.encode(normPass(pass)), "PBKDF2", false, ["deriveKey"]);
+        const key = await crypto.subtle.deriveKey({ name: "PBKDF2", salt: unb64u(L.salt), iterations: L.it, hash: "SHA-256" }, base, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+        const pkcs8 = new Uint8Array(await crypto.subtle.decrypt({ name: "AES-GCM", iv: unb64u(L.iv) }, key, unb64u(L.ct)));
+        tKey = await importSign(pkcs8); tLabel = L.label;
+        try {
+          if (remember) localStorage.setItem(UNLOCK_KEY, JSON.stringify({ kid: TK.kid, label: L.label, k: b64u(pkcs8), exp: Date.now() + 30 * DAY }));
+          else localStorage.removeItem(UNLOCK_KEY);
+        } catch (e) {}
+        return true;
+      } catch (e) { /* このパスコードの鍵ではない */ }
+    }
+    return false;
+  }
+  // 「この端末では30日間パスコードを省く」を選んだとき
+  async function restoreTeacher() {
+    try {
+      const r = JSON.parse(localStorage.getItem(UNLOCK_KEY) || "null");
+      if (!r) return;
+      // 鍵が作り直された・パスコードが無効にされた・期限切れのときは使わない
+      if (!TK || !hasCrypto() || r.kid !== TK.kid || !TK.locks.some(L => L.label === r.label) || r.exp < Date.now()) { localStorage.removeItem(UNLOCK_KEY); return; }
+      tKey = await importSign(unb64u(r.k)); tLabel = r.label;
+    } catch (e) { tKey = null; }
+  }
+  function lockTeacher() { tKey = null; tLabel = ""; try { localStorage.removeItem(UNLOCK_KEY); } catch (e) {} }
+  async function signReply(o) {
+    const p = JSON.stringify(o);
+    const sig = new Uint8Array(await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, tKey, new TextEncoder().encode(p)));
+    return { p, s: b64u(sig), k: TK.kid };
+  }
+  let pubKeyP = null;
+  async function verifyReply(w) {
+    if (!TK || !hasCrypto() || !w || typeof w.p !== "string" || typeof w.s !== "string") return null;
+    pubKeyP = pubKeyP || crypto.subtle.importKey("spki", unb64u(TK.pub), { name: "ECDSA", namedCurve: "P-256" }, false, ["verify"]);
+    try {
+      const ok = await crypto.subtle.verify({ name: "ECDSA", hash: "SHA-256" }, await pubKeyP, unb64u(w.s), new TextEncoder().encode(w.p));
+      return ok ? JSON.parse(w.p) : null;
+    } catch (e) { return null; }
+  }
+  function renderTLock(msg) {
+    session = null; current = null;
+    $app.innerHTML = `
+      <button class="back" id="to-top" style="margin-bottom:14px">← トップ</button>
+      <div class="brand"><span class="badge">🔒 指導者ページ</span></div>
+      <h1>指導者ページ（先生専用）</h1>
+      <p class="lead">指導教員のパスコードを入れると開きます。生徒の方は、トップの「先生に送る」からレポートを送ってください。</p>
+      ${!TK ? `<div class="warn">このアプリには指導者ページの鍵が設定されていません。管理者に連絡してください。</div>`
+        : !hasCrypto() ? `<div class="warn">このブラウザ（または https でない開き方）では指導者ページを開けません。Safari・Chromeの最新版で、https のページから開いてください。</div>`
+        : `<div class="form" style="padding-top:12px">
+        <label class="fl" style="margin-top:0">パスコード</label>
+        <input id="tl-pass" class="fi" type="password" autocomplete="current-password" autocapitalize="off" spellcheck="false" style="width:100%" placeholder="例：xxxx-xxxx-xxxx">
+        <label class="ckrow consent"><input type="checkbox" id="tl-rem"><span>この端末では30日間パスコードを省く（自分専用の端末のときだけ）</span></label>
+        <button class="btn dark wide" id="tl-go">開く</button>
+        <p class="fh" id="tl-msg" style="color:var(--wrong)">${msg || ""}</p>
+        ${pendingReport ? `<p class="fh">開いたあと、届いたレポートを取り込みます。</p>` : ""}
+      </div>`}
+      <div class="actions" style="margin-top:16px"><button class="btn" data-go="send">先生に送る（生徒用）</button><button class="btn" data-go="">トップへ</button></div>`;
+    document.getElementById("to-top").onclick = () => go(null);
+    $app.querySelectorAll("[data-go]").forEach(b => b.onclick = () => go(b.dataset.go));
+    const inp = document.getElementById("tl-pass"), btn = document.getElementById("tl-go");
+    if (inp) {
+      const tryOpen = async () => {
+        if (!inp.value.trim()) return;
+        btn.disabled = true; btn.textContent = "確認中…";
+        const ok = await unlockTeacher(inp.value, document.getElementById("tl-rem").checked);
+        if (ok) {
+          if (pendingReport) { const c = pendingReport; pendingReport = ""; return linkImport(c); }
+          return route();
+        }
+        await new Promise(r => setTimeout(r, 800)); // 続けて試しにくくする
+        btn.disabled = false; btn.textContent = "開く";
+        document.getElementById("tl-msg").textContent = "パスコードがちがいます。";
+        inp.select();
+      };
+      btn.onclick = tryOpen;
+      inp.onkeydown = e => { if (e.key === "Enter") tryOpen(); };
+      setTimeout(() => inp.focus(), 50);
+    }
+    document.title = "指導者ページ｜保育士資格試験問題集";
     window.scrollTo(0, 0);
   }
 
@@ -2437,6 +2540,7 @@
       <button class="back" id="to-top" style="margin-bottom:14px">← トップ</button>
       <div class="brand"><span class="badge">👩‍🏫 指導者ページ</span></div>
       <h1>指導者ページ（先生用）</h1>
+      <p class="tlockbar">🔓 パスコード「${esc(tLabel)}」で開いています<button class="link-btn" id="t-lock">ロックする</button></p>
       <p class="lead">生徒から届いたレポートコードを貼ると、学習の状況が一覧で見られます。コメント・課題・受験科目の変更は「返信コード」にして生徒に送ります。</p>
       <div class="form" style="padding-top:12px">
         <label class="fl" style="margin-top:0">生徒から届いたレポートを取り込む<small>複数まとめて貼ってもかまいません</small></label>
@@ -2478,6 +2582,7 @@
         <button class="link-btn" id="t-clear" style="margin-top:10px;color:var(--wrong)">指導者ページのデータをすべて削除</button></details>
       ${footer()}`;
     document.getElementById("to-top").onclick = () => go(null);
+    document.getElementById("t-lock").onclick = () => { lockTeacher(); go(null); };
     $app.querySelectorAll("[data-st]").forEach(b => b.onclick = () => go("teacher/s/" + b.dataset.st));
     $app.querySelectorAll("[data-go]").forEach(b => b.onclick = () => go(b.dataset.go));
     document.getElementById("t-name").onchange = e => { tch.name = e.target.value.trim().slice(0, 20); saveTeacher(); };
@@ -2588,7 +2693,8 @@
       if (sj) o.sj = sj;
       if (dr.wd) o.wd = +dr.wd;
       if (dr.we) o.we = +dr.we;
-      const code = await pack(REPLY_PREFIX, o);
+      if (!tKey) { msg.style.color = "var(--wrong)"; msg.textContent = "指導者ページがロックされました。パスコードを入れ直してください。"; return; }
+      const code = await pack(REPLY_PREFIX, await signReply(o));
       const rec = { id: o.id, t: o.t, c: o.c, a: o.a, sj: o.sj || null, wd: o.wd, we: o.we };
       if (to === "*") tch.all = (tch.all || []).concat(rec).slice(-60);
       else { const x = tch.sts[to]; x.sent = (x.sent || []).concat(rec).slice(-60); }
@@ -2839,5 +2945,5 @@
   };
 
   if (/[?&]debug\b/.test(location.search)) window.__hk = { start, qById, variantOf, kindsOf, hotLevel, targetForms, ALL, drillItems, phasesOf, outlook, menuItems, mockPick, crossTerms, signal, get plan() { return plan; }, get log() { return log; } };
-  route();
+  restoreTeacher().finally(route);
 })();
