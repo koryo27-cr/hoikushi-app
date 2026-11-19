@@ -2732,7 +2732,11 @@
       q("t-scopy").onclick = async e => {
         const b = e.target;
         try {
-          const txt = await (await fetch("server/Code.gs", { cache: "no-store" })).text();
+          let txt = "";
+          for (const f of ["server/Code.gs", "server/Code.txt"]) { // claude.ai版は .txt で置いている
+            try { txt = await (await fetch(f, { cache: "no-store" })).text(); } catch (_) { txt = ""; }
+            if (/function doPost/.test(txt)) break;
+          }
           if (!/function doPost/.test(txt)) throw 0;
           const ta = q("t-stext"); ta.value = txt; ta.style.display = "";
           try { await navigator.clipboard.writeText(txt); b.textContent = "コピーしました ✓"; } catch (_) { ta.focus(); ta.select(); b.textContent = "下を全部選んでコピー"; }
