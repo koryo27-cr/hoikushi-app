@@ -10,7 +10,7 @@
 //   node tools/teacher_keys.mjs add <名前>                 パスコードを追加（環境変数 PASS に今あるパスコードのどれかを入れる）
 //   node tools/teacher_keys.mjs remove <名前>              そのパスコードを無効にする
 //   node tools/teacher_keys.mjs list                       パスコードの一覧（名前だけ）
-// パスコードを指定したいときは、環境変数 NEWPASS に入れる（8文字以上）。指定しなければ自動で作る。
+// パスコードを指定したいときは、環境変数 NEWPASS に入れる（8文字以上。テスト用に短くするときは ALLOW_SHORT=1 も）。指定しなければ自動で作る。
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 const { subtle } = globalThis.crypto;
 const getRandomValues = a => globalThis.crypto.getRandomValues(a);
@@ -49,7 +49,7 @@ async function unlock(k, pass) {
   return null;
 }
 function newPass() {
-  if (process.env.NEWPASS) { if (norm(process.env.NEWPASS).length < 8) throw new Error("NEWPASS は8文字以上にしてください"); return process.env.NEWPASS; }
+  if (process.env.NEWPASS) { if (norm(process.env.NEWPASS).length < 8 && !process.env.ALLOW_SHORT) throw new Error("NEWPASS は8文字以上にしてください（テスト用に短くするときは ALLOW_SHORT=1）"); return process.env.NEWPASS; }
   const A = "abcdefghjkmnpqrstuvwxyz23456789"; // 見まちがえやすい文字（i l o 0 1）を除く
   const r = getRandomValues(new Uint8Array(12));
   const s = Array.from(r, x => A[x % A.length]).join("");
