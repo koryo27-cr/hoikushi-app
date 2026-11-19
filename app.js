@@ -26,16 +26,19 @@
   // plan:  学習プラン（受験日・科目・時間・テンプレート・変更履歴）
   // mk:    模擬試験の結果 [{sid, t, n, c, ms, cats:{分野:[n,c]}}]
   // ck:    実技試験の準備チェック { key: t }
-  let stats = {}, rv = {}, fm = {}, resetAt = 0, resets = {}, log = {}, cf = {}, plan = null, mk = [], ck = {};
+  // me:    先生に送るときの名前 { id: 生徒ごとの識別子, nick, t }
+  // tf:    先生からの返信 { fb:[{id,t,fr,txt}] コメント, asg:[課題], done:{課題ID:t}, imp:{返信ID:t}, seen: t }
+  let stats = {}, rv = {}, fm = {}, resetAt = 0, resets = {}, log = {}, cf = {}, plan = null, mk = [], ck = {}, me = null, tf = { fb: [], asg: [], done: {}, imp: {}, seen: 0 };
   try {
     const raw = JSON.parse(localStorage.getItem(STORE_KEY) || "{}") || {};
     if (raw.stats) {
       stats = raw.stats; rv = raw.rv || {}; fm = raw.fm || {}; resetAt = raw.resetAt || 0; resets = raw.resets || {};
       log = raw.log || {}; cf = raw.cf || {}; plan = raw.plan || null; mk = raw.mk || []; ck = raw.ck || {};
+      me = raw.me || null; tf = mergeTf(null, raw.tf);
     }
     else stats = raw;
   } catch (e) { stats = {}; }
-  function saveLocal() { try { localStorage.setItem(STORE_KEY, JSON.stringify({ stats, rv, fm, resetAt, resets, log, cf, plan, mk, ck })); } catch (e) {} }
+  function saveLocal() { try { localStorage.setItem(STORE_KEY, JSON.stringify({ stats, rv, fm, resetAt, resets, log, cf, plan, mk, ck, me, tf })); } catch (e) {} }
 
   const cutoffFor = id => Math.max(resetAt, resets[subjOfQ[id]] || 0);
   function merge(a, b) {
@@ -111,6 +114,14 @@
     });
     return out.sort((x, y) => x.t - y.t).slice(-200);
   }
+  // 先生からの返信：コメント・課題はIDで重ねる（消えない）。完了は早いほう
+  function mergeTf(a, b) {
+    a = a || {}; b = b || {};
+    const byId = (x, y) => { const m = {}; (x || []).concat(y || []).forEach(o => { if (o && o.id && !m[o.id]) m[o.id] = o; }); return Object.values(m).sort((p, q) => (p.t || 0) - (q.t || 0)); };
+    const minT = (x, y) => { const o = Object.assign({}, x); Object.entries(y || {}).forEach(([k, v]) => { if (!o[k] || v < o[k]) o[k] = v; }); return o; };
+    return { fb: byId(a.fb, b.fb).slice(-60), asg: byId(a.asg, b.asg).slice(-120), done: minT(a.done, b.done), imp: minT(a.imp, b.imp), seen: Math.max(a.seen || 0, b.seen || 0) };
+  }
+  const mergeMe = (a, b) => !a ? b || null : !b ? a : ((a.t || 0) >= (b.t || 0) ? Object.assign({}, a, { id: a.id || b.id }) : Object.assign({}, b, { id: a.id || b.id }));
   const mergePlan = (a, b) => !a ? b || null : !b ? a : ((a.t || 0) >= (b.t || 0) ? a : b);
 
   // 以前の版の記録（直近で不正解）や他の端末の記録から、復習リストを補う
@@ -197,7 +208,7 @@
   const fmtDay = t => { const d = new Date(t); const diff = Math.round((dayStart(t) - dayStart(Date.now())) / DAY); return diff === 1 ? "明日" : `${d.getMonth() + 1}/${d.getDate()}`; };
 
   // ---------- cloud sync (claude.ai でログイン時のみ) ----------
-  let docRef = null, syncState = "connecting", writing = false, dirty = false, pushTimer = null;
+  let tdocRef = null, docRef = null, syncState = "connecting", writing = false, dirty = false, pushTimer = null;
   function setSync(s) { syncState = s; const el = document.getElementById("sync"); if (el) el.outerHTML = syncBadge(); }
   function syncBadge() {
     const m = {
@@ -208,7 +219,7 @@
     }[syncState];
     return `<span class="sync ${m[0]}" id="sync"><i></i>${m[1]}</span>`;
   }
-  const snapshot = () => JSON.stringify([stats, rv, fm, resetAt, resets, log, cf, plan, mk, ck]);
+  const snapshot = () => JSON.stringify([stats, rv, fm, resetAt, resets, log, cf, plan, mk, ck, me, tf]);
   const plain = o => JSON.parse(JSON.stringify(o));
   function schedulePush() { if (!docRef) return; clearTimeout(pushTimer); pushTimer = setTimeout(push, 1500); }
   async function push() {
@@ -216,7 +227,7 @@
     if (writing) { dirty = true; return; }
     writing = true;
     try {
-      await docRef.set({ stats: plain(stats), rv: plain(rv), fm: plain(fm), resetAt, resets: Object.assign({}, resets), log: plain(log), cf: plain(cf), plan: plan ? plain(plan) : null, mk: plain(mk), ck: plain(ck), updatedAt: Date.now() });
+      await docRef.set({ stats: plain(stats), rv: plain(rv), fm: plain(fm), resetAt, resets: Object.assign({}, resets), log: plain(log), cf: plain(cf), plan: plan ? plain(plan) : null, mk: plain(mk), ck: plain(ck), me: me ? plain(me) : null, tf: plain(tf), updatedAt: Date.now() });
       if (syncState !== "on") setSync("on");
     } catch (e) {
       if (e && e.code === "unavailable") setTimeout(push, 1500 + Math.random() * 1500);
@@ -238,6 +249,8 @@
     plan = mergePlan(plan, body.plan || null);
     mk = mergeMk(mk, body.mk || []);
     ck = mergeT(ck, body.ck || {});
+    me = mergeMe(me, body.me || null);
+    tf = mergeTf(tf, body.tf || null);
     syncRv();
     saveLocal();
     return snapshot() !== before;
@@ -256,13 +269,22 @@
       docRef = ref;
       const remote = snap.exists ? snap.data() : null;
       const changed = absorb(remote);
-      if (!remote || JSON.stringify([remote.stats || {}, remote.rv || {}, remote.fm || {}, remote.resetAt || 0, remote.resets || {}, remote.log || {}, remote.cf || {}, remote.plan || null, remote.mk || [], remote.ck || {}]) !== snapshot()) await push();
+      if (!remote || JSON.stringify([remote.stats || {}, remote.rv || {}, remote.fm || {}, remote.resetAt || 0, remote.resets || {}, remote.log || {}, remote.cf || {}, remote.plan || null, remote.mk || [], remote.ck || {}, remote.me || null, remote.tf || null]) !== snapshot()) await push();
       setSync("on");
       if (changed && !session) route();
       ref.onSnapshot(s => {
         if (!s.exists || s.metadata.hasPendingWrites) return;
         if (absorb(s.data()) && !session) route();
       }, () => { setSync("err"); docRef = null; });
+      // 指導者ページのデータ（取り込んだレポート・送った返信）も、ログイン中は端末間で同期
+      try {
+        const tref = db.collection("data/users/" + uid).doc("teacher");
+        const ts = await tref.get();
+        tdocRef = tref;
+        const tchanged = ts.exists && absorbTeacher(ts.data());
+        if (Object.keys(tch.sts).length || tch.name || (tch.all || []).length) pushTeacher();
+        if (tchanged && !session && /^#teacher/.test(location.hash)) route();
+      } catch (e) { tdocRef = null; }
     } catch (e) { setSync(syncState === "connecting" ? "local" : "err"); docRef = null; }
   })();
 
@@ -518,7 +540,10 @@
   let session = null, current = null, resetTarget = null;
   function route() {
     if (mock) { stopMock(); mock = null; }
-    const [id, sub] = (location.hash || "").replace(/^#/, "").split("/");
+    const raw = (location.hash || "").replace(/^#/, "");
+    if (/^r=/.test(raw)) return linkImport(raw.slice(2)); // 生徒から届いたレポートのリンク
+    if (/^f=/.test(raw)) { pendingReply = raw.slice(2); replaceHash("send"); return renderSend(); } // 先生からの返信のリンク
+    const [id, sub, third] = raw.split("/");
     const S = subjById[id];
     if (S && sub && S.categories.some(c => c.id === sub)) renderNote(S, S.categories.find(c => c.id === sub));
     else if (S) renderSubject(S);
@@ -527,9 +552,18 @@
     else if (id === "digest") renderDigest(sub);
     else if (id === "glossary") renderGlossary();
     else if (id === "jitsugi") renderJitsugi();
+    else if (id === "send") renderSend();
+    else if (id === "teacher") {
+      if (sub === "s" && tch.sts[third]) renderTStudent(third);
+      else if (sub === "print" && tch.sts[third]) renderTPrint(third);
+      else if (sub === "class") renderTClass();
+      else if (sub === "all") renderTAll();
+      else renderTeacher();
+    }
     else renderTop();
   }
   window.addEventListener("hashchange", () => { session = null; route(); });
+  function replaceHash(h) { try { history.replaceState(null, "", location.pathname + location.search + (h ? "#" + h : "")); } catch (e) {} }
   function go(id) {
     const h = id ? "#" + id : "";
     if ((location.hash || "") === h) { session = null; route(); return; }
@@ -550,7 +584,7 @@
     if (!pool.length) return;
     opts = opts || {};
     session = {
-      title, back: current ? current.id : null, review: !!opts.review, theme: opts.theme || null, menu: opts.menu || null,
+      title, back: current ? current.id : null, review: !!opts.review, theme: opts.theme || null, menu: opts.menu || null, asg: opts.asg || null,
       u0: opts.theme ? themeUnderstanding(opts.theme) : null,
       items: (opts.keep ? pool : shuffle(pool)).map(x => x.form ? makeItem(x.q, x.form, x.kind) : makeItem(x, "o")),
       i: 0, results: []
@@ -619,6 +653,8 @@
       <div class="brand"><span class="badge">保育士試験対策</span></div>
       <h1>保育士資格試験問題集</h1>
       <p class="lead">筆記試験 全9科目・${ALL.length}問。科目を選んでください。</p>
+      ${fbCardHtml()}
+      ${!plan && asgMenuItems().length ? asgBoxHtml() : ""}
       ${plan ? menuHtml(plan, true) + `<button class="link-btn plan-link" data-go="plan">学習プランの詳細・見通し →</button>`
         : `<button class="plancta" data-go="plan/setup"><b>📅 学習プランを作る</b><span>受験日・受験科目・1日に使える時間を入れると、毎日のメニューを自動で組み立てます</span></button>`}
       ${statBox(all, queued)}
@@ -653,9 +689,12 @@
         <button class="tool" data-go="glossary"><span>📚</span><b>用語集・年表</b><small>人物・法律・指針の年</small></button>
         <button class="tool" data-go="cram"><span>📘</span><b>間違えた問題の整理</b><small>読むだけの復習</small></button>
         <button class="tool" data-go="jitsugi"><span>🎹</span><b>実技試験の準備</b><small>音楽・造形・言語</small></button>
+        <button class="tool" data-go="send"><span>✉️</span><b>先生に送る</b><small>学習レポート・先生からの返信</small></button>
+        <button class="tool" data-go="teacher"><span>👩‍🏫</span><b>指導者ページ</b><small>先生用：生徒の状況とフィードバック</small></button>
       </div>
       ${footer()}`;
-    if (plan) wireMenu(plan);
+    if (plan) wireMenu(plan); else wireAsgBox();
+    wireFbCard();
     $app.querySelectorAll("[data-go]").forEach(b => b.onclick = () => go(b.dataset.go));
     $app.querySelectorAll("[data-subj]").forEach(b => b.onclick = () => go(b.dataset.subj));
     $app.querySelectorAll("[data-top]").forEach(b => b.onclick = () => {
@@ -1096,6 +1135,7 @@
   function renderResult() {
     const r = session.results;
     if (session.menu && r.length) { markMenu(session.menu); session.menu = null; }
+    if (session.asg && r.length) { markAsg(session.asg); session.asg = null; }
     const okN = r.filter(x => x.ok).length;
     const pct = r.length ? Math.round(okN / r.length * 100) : 0;
     const allMissed = [...new Set(r.filter(x => !x.ok).map(x => x.q))];
@@ -1265,13 +1305,16 @@
   }
 
   // ---------- 学習カレンダーと継続日数 ----------
-  function streak() {
-    let n = 0, i = log[dayKey(Date.now())] && log[dayKey(Date.now())].n ? 0 : 1;
-    for (; ; i++) { const L = log[dayKey(Date.now() - i * DAY)]; if (L && L.n) n++; else break; }
+  const logRef = () => log;
+  function streak(src) {
+    src = src || log;
+    let n = 0, i = src[dayKey(Date.now())] && src[dayKey(Date.now())].n ? 0 : 1;
+    for (; ; i++) { const L = src[dayKey(Date.now() - i * DAY)]; if (L && L.n) n++; else break; }
     return n;
   }
-  function calendarHtml(weeks) {
+  function calendarHtml(weeks, src) {
     weeks = weeks || 18;
+    const log = src || logRef(); // 指導者ページでは生徒のレポートの記録を表示
     const t = today0(), end = t + (6 - new Date(t).getDay()) * DAY, start = end - (weeks * 7 - 1) * DAY;
     const lv = n => !n ? 0 : n < 10 ? 1 : n < 30 ? 2 : n < 60 ? 3 : 4;
     let cells = "", months = "";
@@ -1283,9 +1326,10 @@
         cells += day > t ? `<i class="f"></i>` : `<i class="l${lv(n)}${day === t ? " now" : ""}" title="${fmtMD(day)} ${n}問"></i>`;
       }
     }
-    const wk = recDays(7).reduce((a, L) => a + (L.n || 0), 0), act = Object.values(log).filter(L => L.n).length;
+    let wk = 0; for (let i = 0; i < 7; i++) { const L = log[dayKey(Date.now() - i * DAY)]; if (L) wk += L.n || 0; }
+    const act = Object.values(log).filter(L => L.n).length;
     return `<div class="calbox">
-      <div class="calhead"><b>🔥 ${streak()}日連続</b><span>この7日間 ${wk}問・学習した日 ${act}日</span></div>
+      <div class="calhead"><b>🔥 ${streak(log)}日連続</b><span>この7日間 ${wk}問・学習した日 ${act}日</span></div>
       <div class="calm" style="--w:${weeks}">${months}</div>
       <div class="cal" style="--w:${weeks}">${cells}</div>
       <div class="calleg">少<i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i>多</div>
@@ -1426,16 +1470,18 @@
     it.badge = D === 1 ? "前日" : `${D}日前`;
     return [it];
   }
+  const allMenuItems = p => (daysTo(p.exam) >= -1 ? asgMenuItems() : []).concat(menuItems(p));
   function menuHtml(p, compact) {
-    const items = menuItems(p), D = daysTo(p.exam);
+    const items = allMenuItems(p), D = daysTo(p.exam);
     const { cur } = phaseNow(p);
     const head = D > 0 ? `受験日まで <b>${D}日</b>　<span class="phase p${cur.k}">${cur.name}期</span>` : D === 0 ? "<b>試験1日目</b>" : D === -1 ? "<b>試験2日目</b>" : "試験日を過ぎました";
     let body;
     if (D < -1) body = `<p class="mnote">おつかれさまでした。結果が出たら、合格した科目を入れて次の回の計画を作りましょう。</p><button class="btn dark wide" data-go="plan/setup">結果を入れて次の計画へ</button>`;
     else if (D === -1) body = `<p class="mnote">2日目の科目、がんばってください。</p>`;
     else if (!items.length) body = `<p class="mnote">受験科目を選ぶと、毎日のメニューが出ます。</p>`;
+    else if (D < 0) body = "";
     else body = items.map((x, i) => `<div class="mi${x.done ? " done" : ""}${x.off ? " off" : ""}">
-        <button class="mbtn" data-mi="${i}" ${x.off ? "disabled" : ""}>${x.badge ? `<span class="mbadge">${x.badge}</span>` : ""}<span class="mt">${x.done ? "✓ " : ""}${esc(x.t)}</span><span class="md">${esc(x.d)}</span></button>
+        <button class="mbtn" data-mi="${i}" ${x.off ? "disabled" : ""}>${x.badge ? `<span class="mbadge${/^a:/.test(x.key) ? " t" : ""}">${x.badge}</span>` : ""}<span class="mt">${x.done ? "✓ " : ""}${esc(x.t)}</span><span class="md">${esc(x.d)}</span></button>
         ${x.note ? `<button class="mnote-btn" data-go="${x.note}">📖<span>要点</span></button>` : ""}
       </div>`).join("");
     const done = items.filter(x => x.done).length;
@@ -1447,7 +1493,7 @@
     </div>`;
   }
   function wireMenu(p) {
-    const items = menuItems(p);
+    const items = allMenuItems(p);
     $app.querySelectorAll("[data-mi]").forEach(b => b.onclick = () => { current = null; items[+b.dataset.mi].run(); });
     $app.querySelectorAll("[data-go]").forEach(b => b.onclick = () => go(b.dataset.go));
   }
@@ -1666,11 +1712,11 @@
     cats.forEach(id => { pick.push(...shuffle(exam.filter(q => q.c === id)).sort((a, b) => ((stats[a.id] || {}).t || 0) - ((stats[b.id] || {}).t || 0)).slice(0, quota[id])); });
     return shuffle(pick);
   }
-  function startMock(S, menuKey) {
+  function startMock(S, menuKey, asgId) {
     const qs = mockPick(S);
     if (!qs.length) return;
     session = null;
-    mock = { S, items: qs.map(q => ({ q, sel: [], chosen: null })), i: 0, t0: Date.now(), limit: examMin(S) * 60000, menu: menuKey || null, timer: null };
+    mock = { S, items: qs.map(q => ({ q, sel: [], chosen: null })), i: 0, t0: Date.now(), limit: examMin(S) * 60000, menu: menuKey || null, asg: asgId || null, timer: null };
     mock.timer = setInterval(tickMock, 1000);
     renderMock();
   }
@@ -1739,6 +1785,7 @@
     mk.push(mock.res);
     saveLocal(); schedulePush();
     if (mock.menu) markMenu(mock.menu);
+    if (mock.asg) markAsg(mock.asg);
     renderMockResult();
   }
   function renderMockResult() {
@@ -1936,6 +1983,756 @@
     window.scrollTo(0, 0);
   }
 
+  // =====================================================================
+  // 指導者フィードバック（A方式：サーバーを使わず、コードを送り合う）
+  //   生徒：「先生に送る」→ 学習の要約を詰めたレポートコード（HKR1:）をLINE等で送る
+  //   先生：指導者ページに貼る → 一覧・声かけ・詳細・クラス共通のつまずき・面談用レポート
+  //         → コメント・課題・受験科目の変更を返信コード（HKT1:）で返す
+  //   生徒：返信コードを貼る → コメントはトップに、課題は今日のメニューに入る
+  // =====================================================================
+  const REP_PREFIX = "HKR1:", REPLY_PREFIX = "HKT1:", TBK_PREFIX = "HKB1:";
+  const TEACHER_KEY = "hoikushi-teacher-v1";
+  const SHORT = { "hoiku-genri": "原理", "kyouiku-genri": "教育", "shakaiteki-yougo": "養護", "kodomo-katei-fukushi": "家福", "shakai-fukushi": "社福", "hoiku-shinri": "心理", "kodomo-hoken": "保健", "shoku-eiyou": "栄養", "jisshu-riron": "実習" };
+  const SJ_CODE = { now: "n", later: "l", pass: "p" }, SJ_FROM = { n: "now", l: "later", p: "pass" };
+  const SJ_NAME = { now: "今回", later: "次の回", pass: "免除" };
+  const rid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  function ensureMe() { if (!me || !me.id) { me = { id: rid(), nick: "", t: Date.now() }; saveLocal(); schedulePush(); } return me; }
+  const fmtDT = t => { const d = new Date(t); return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`; };
+  const ago = t => { const n = Math.round((today0() - dayStart(t)) / DAY); return n <= 0 ? "今日" : n === 1 ? "昨日" : n + "日前"; };
+  const nl = s => esc(s).replace(/\n/g, "<br>");
+
+  // ---------- コードの圧縮と読み取り ----------
+  const b64u = bytes => { let s = ""; for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000)); return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); };
+  const unb64u = s => { s = s.replace(/-/g, "+").replace(/_/g, "/"); while (s.length % 4) s += "="; const bin = atob(s), out = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i); return out; };
+  async function viaStream(bytes, st) { return new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(st)).arrayBuffer()); }
+  async function pack(prefix, obj) {
+    const bytes = new TextEncoder().encode(JSON.stringify(obj));
+    if (typeof CompressionStream !== "undefined") { try { return prefix + "z" + b64u(await viaStream(bytes, new CompressionStream("deflate-raw"))); } catch (e) {} }
+    return prefix + "j" + b64u(bytes);
+  }
+  async function unpackOne(kind, data) {
+    let bytes = unb64u(data);
+    if (kind === "z") {
+      if (typeof DecompressionStream === "undefined") throw new Error("old");
+      bytes = await viaStream(bytes, new DecompressionStream("deflate-raw"));
+    }
+    return JSON.parse(new TextDecoder().decode(bytes));
+  }
+  // 貼り付けた文章・リンクの中からコードを全部探す（改行で切れていても読めるように空白は除く）
+  function findCodes(prefix, text) {
+    let s = String(text || "").replace(/\s+/g, "");
+    try { s = decodeURIComponent(s); } catch (e) {}
+    const head = prefix.slice(0, -1); // 続けて貼られた次のコードの頭（HKR1: など）で区切る
+    const rx = new RegExp(head + ":([zj])((?:(?!" + head + ":)[A-Za-z0-9_-])+)", "g"), out = [];
+    let m; while ((m = rx.exec(s))) out.push([m[1], m[2]]);
+    return out;
+  }
+  const appLink = () => (/^https:$/.test(location.protocol) && window.top === window.self && !/claude/.test(location.hostname)) ? location.origin + location.pathname : "";
+  function codeOutHtml(code, linkHash, what) {
+    const link = appLink();
+    return `<textarea class="fi codebox" readonly id="co-text">${esc(code)}</textarea>
+      <div class="codebtns">
+        <button class="btn dark" id="co-copy">コードをコピー</button>
+        ${navigator.share ? `<button class="btn" id="co-share">LINEなどで送る</button>` : ""}
+        ${link ? `<button class="btn" id="co-link">リンクをコピー</button>` : ""}
+      </div>
+      <p class="fh">${code.length.toLocaleString()}文字。${what}${link ? "リンクで送ると、相手はタップするだけで取り込めます。" : ""}</p>`;
+  }
+  function wireCodeOut(code, linkHash, title) {
+    const link = appLink() ? appLink() + "#" + linkHash + "=" + code : "";
+    const copy = async (txt, btn, done) => {
+      try { await navigator.clipboard.writeText(txt); btn.textContent = done; }
+      catch (e) { const ta = document.getElementById("co-text"); ta.focus(); ta.select(); btn.textContent = "選択しました。長押しでコピー"; }
+    };
+    const c = document.getElementById("co-copy"); if (c) c.onclick = () => copy(code, c, "コピーしました ✓");
+    const l = document.getElementById("co-link"); if (l) l.onclick = () => copy(link, l, "リンクをコピーしました ✓");
+    const sh = document.getElementById("co-share");
+    if (sh) sh.onclick = () => { navigator.share({ title, text: link ? title + "\n" + link : title + "\n" + code }).catch(() => {}); };
+  }
+
+  // ---------- 生徒：レポートを作る ----------
+  function buildReport() {
+    ensureMe();
+    const now = Date.now(), d = {};
+    for (let i = 0; i < 42; i++) { const k = dayKey(now - i * DAY), L = log[k]; if (L && L.n) d[k] = [L.n, L.c, Math.round((L.ms || 0) / 60000)]; }
+    const s = {};
+    SUBJ.forEach(S => {
+      const sm = summary(S.questions), tgt = plan && plan.subj[S.id] === "now";
+      if (!sm.tried && !tgt) return;
+      const sg = signal(S);
+      s[S.id] = [sm.tried, sm.total, sm.c, sm.w, S.questions.filter(inQueue).length, S.questions.filter(isDue).length, sg.lv, sg.rate, sg.u, sg.mp];
+    });
+    const wk = [];
+    SUBJ.forEach(S => S.categories.forEach(c => {
+      const sm = summary(S.questions.filter(q => q.c === c.id));
+      if (sm.c + sm.w >= 4 && sm.rate < 70) wk.push([S.id, c.id, sm.rate, sm.c + sm.w]);
+    }));
+    wk.sort((a, b) => a[2] - b[2]);
+    const since = now - 30 * DAY, r = { k: 0, y: 0, m: 0, u: 0 };
+    let g = 0;
+    Object.values(cf).forEach(x => { if (!x || (x.t || 0) < since) return; if (x.r && r[x.r] !== undefined) r[x.r]++; if (x.g) g++; });
+    const gq = Object.entries(cf).filter(([id, x]) => x && x.g && qById[id]).sort((a, b) => (b[1].t || 0) - (a[1].t || 0)).slice(0, 15).map(([id]) => id);
+    const x = Object.keys(stats).filter(id => qById[id] && (stats[id].last === false || (rv[id] && rv[id].s > 0 && !rv[id].f)))
+      .sort((a, b) => (stats[b].t || 0) - (stats[a].t || 0)).slice(0, 80);
+    let p = null;
+    if (plan) {
+      const ol = outlook(plan);
+      p = { ex: plan.exam, tpl: plan.tpl, sj: SUBJ.map(S => SJ_CODE[plan.subj[S.id]] || "n").join(""), ph: ol.cur.k, lag: Math.max(0, ol.lag || 0), big: ol.lagBig ? 1 : 0,
+        wn: ol.warn ? ol.warn.mockDays : null, cap: ol.cap, un: ol.unseen, wd: plan.wd, we: plan.we, goal: plan.goal || "" };
+    }
+    return { v: 1, id: me.id, nk: me.nick || "", t: now, d, s, wk: wk.slice(0, 8), r, g, gq, x, p,
+      mk: mk.slice(-20).map(m => [m.sid, m.t, m.n, m.c, m.up ? 1 : 0]), a: Object.assign({}, tf.done),
+      tot: Object.values(log).reduce((a2, L) => a2 + (L.n || 0), 0) };
+  }
+
+  // ---------- 生徒：先生の課題 ----------
+  function asgLabel(a) {
+    const S = subjById[a.sid], c = S && S.categories.find(x => x.id === a.c), th = S && (S.themes || []).find(x => x.id === a.th);
+    const main = a.k === "cat" && c ? `${S.name}「${c.name}」${a.n}問`
+      : a.k === "theme" && th ? `頻出テーマ「${th.name.replace(/（.*$/, "")}」${a.n}問`
+      : a.k === "mock" && S ? `模擬試験：${S.name}`
+      : a.k === "note" && c ? `${S.name}「${c.name}」の要点を読む`
+      : a.k === "rv" ? "「今日の復習」を片付ける"
+      : a.k === "free" ? (a.txt || "自由課題") : "課題";
+    return main;
+  }
+  const asgNote = a => a.k === "free" ? "" : (a.txt || "");
+  function markAsg(id) {
+    if (!id || tf.done[id]) return;
+    tf.done[id] = Date.now();
+    saveLocal(); schedulePush();
+  }
+  function runAsg(a) {
+    const S = subjById[a.sid];
+    current = null;
+    const title = "先生の課題：" + asgLabel(a);
+    if (a.k === "cat" && S) {
+      const qs = S.questions.filter(q => q.c === a.c);
+      const rank = q => isWeakQ(q) ? 0 : !stats[q.id] ? 1 : (cf[q.id] && cf[q.id].g) ? 2 : 3;
+      return start(title, shuffle(qs).sort((x, y) => rank(x) - rank(y)).slice(0, a.n || 10), { keep: true, asg: a.id });
+    }
+    if (a.k === "theme" && S) {
+      const th = (S.themes || []).find(x => x.id === a.th);
+      if (th) { const qs = th.qs.map(id => qById[id]).filter(Boolean); return start(title, drillItems(qs, Math.min(a.n || 10, qs.length)), { keep: true, theme: th, asg: a.id }); }
+    }
+    if (a.k === "mock" && S) return startMock(S, null, a.id);
+    if (a.k === "note" && S) { markAsg(a.id); return go(`${a.sid}/${a.c}`); }
+    if (a.k === "rv") {
+      const pool = reviewPool(plan ? targetQs(plan) : ALL);
+      if (pool.length) return start("先生の課題：今日の復習", pool, { review: true, asg: a.id });
+      markAsg(a.id); return route();
+    }
+    markAsg(a.id); route(); // 自由課題は「やった」で完了
+  }
+  // 今日のメニューに並べる先生の課題（未完了と、完了して3日以内のもの）
+  function asgMenuItems() {
+    const now = Date.now();
+    return tf.asg.filter(a => !tf.done[a.id] || now - tf.done[a.id] < 3 * DAY).slice(-8).map(a => ({
+      key: "a:" + a.id, badge: "先生の課題", t: asgLabel(a), done: !!tf.done[a.id],
+      d: ((asgNote(a) ? "「" + asgNote(a) + "」" : "") + (a.due ? `　期限 ${fmtMD(parseDay(a.due))}` : "") + (a.k === "free" && !tf.done[a.id] ? "　終わったらタップ" : "")).trim(),
+      note: (a.k === "cat" || a.k === "note") && a.c ? `${a.sid}/${a.c}` : null,
+      run: () => runAsg(a)
+    }));
+  }
+  function asgBoxHtml() {
+    const items = asgMenuItems();
+    return `<div class="menu"><div class="mh"><span class="mtitle">👩‍🏫 先生の課題</span><span class="mcount">${items.filter(x => x.done).length} / ${items.length} 完了</span></div>
+      ${items.map((x, i) => `<div class="mi${x.done ? " done" : ""}"><button class="mbtn" data-ai="${i}"><span class="mbadge t">${x.badge}</span><span class="mt">${x.done ? "✓ " : ""}${esc(x.t)}</span>${x.d ? `<span class="md">${esc(x.d)}</span>` : ""}</button>
+        ${x.note ? `<button class="mnote-btn" data-go="${x.note}">📖<span>要点</span></button>` : ""}</div>`).join("")}</div>`;
+  }
+  function wireAsgBox() {
+    const items = asgMenuItems();
+    $app.querySelectorAll("[data-ai]").forEach(b => b.onclick = () => items[+b.dataset.ai].run());
+  }
+  // トップの「先生から」カード（14日以内の最新のコメント）
+  function fbCardHtml() {
+    const f = tf.fb[tf.fb.length - 1];
+    if (!f || Date.now() - f.t > 14 * DAY) return "";
+    const unseen = f.t > (tf.seen || 0);
+    return `<div class="fbcard${unseen ? " new" : ""}"><div class="fbh"><b>👩‍🏫 ${esc(f.fr || "先生")}から</b><span>${fmtMD(f.t)}${unseen ? '<i class="fbnew">新着</i>' : ""}</span></div>
+      <div class="fbt">${nl(f.txt)}</div>
+      <div class="fbf">${unseen ? `<button class="link-btn" id="fb-seen">読みました</button>` : ""}<button class="link-btn" data-go="send">これまでのメッセージ・先生に送る →</button></div></div>`;
+  }
+  function wireFbCard() {
+    const b = document.getElementById("fb-seen");
+    if (b) b.onclick = () => { tf.seen = Date.now(); saveLocal(); schedulePush(); route(); };
+  }
+
+  // ---------- 生徒：返信を取り込む ----------
+  const ASG_KINDS = ["cat", "theme", "mock", "note", "rv", "free"];
+  function cleanAsg(a, o) {
+    if (!a || typeof a !== "object" || !ASG_KINDS.includes(a.k)) return null;
+    return { id: String(a.id || rid()).slice(0, 40), t: +o.t || Date.now(), k: a.k, sid: subjById[a.sid] ? a.sid : null, c: a.c ? String(a.c).slice(0, 40) : null,
+      th: a.th ? String(a.th).slice(0, 60) : null, n: Math.max(1, Math.min(60, +a.n || 10)), txt: String(a.txt || "").slice(0, 300), due: /^\d{4}-\d\d-\d\d$/.test(a.due || "") ? a.due : "", fr: String(o.fr || "").slice(0, 30) };
+  }
+  function replySummary(o) {
+    const out = [];
+    if (o.c) out.push("コメント");
+    if ((o.a || []).length) out.push(`課題${o.a.length}件`);
+    if (o.sj && Object.keys(o.sj).length) out.push("受験科目の変更：" + Object.entries(o.sj).filter(([k]) => subjById[k]).map(([k, v]) => `${subjById[k].name}→${SJ_NAME[v] || v}`).join("、"));
+    if (o.wd != null || o.we != null) out.push(`1日の時間の変更：${o.wd != null ? "平日" + o.wd + "分" : ""}${o.we != null ? " 週末" + o.we + "分" : ""}`);
+    return out;
+  }
+  function applyTeacherPlan(o) {
+    const now = Date.now(), by = "teacher", label = { now: "今回の受験科目に", later: "次の回に", pass: "免除（合格済み）に" };
+    let p = plan ? JSON.parse(JSON.stringify(plan)) : null, created = false, subjChanged = false;
+    if (!p) {
+      const ex = PRESETS[0].d;
+      p = { exam: ex, tpl: recommendTpl(daysTo(ex)), wd: 30, we: 90, goal: "", subj: Object.fromEntries(SUBJ.map(s => [s.id, "now"])), day1: DAY1_DEFAULT.slice(), hist: [], start: now };
+      created = true;
+    }
+    p.hist = p.hist || [];
+    if (o.sj) SUBJ.forEach(s => {
+      const v = o.sj[s.id];
+      if (v && label[v] && p.subj[s.id] !== v) { p.subj[s.id] = v; p.hist.push({ t: now, by, sid: s.id, v, txt: `${s.name}を${label[v]}変更` }); subjChanged = true; }
+    });
+    if (o.wd != null && +o.wd !== p.wd) { p.hist.push({ t: now, by, txt: `平日の時間を${p.wd}分から${+o.wd}分に変更` }); p.wd = +o.wd; }
+    if (o.we != null && +o.we !== p.we) { p.hist.push({ t: now, by, txt: `週末の時間を${p.we}分から${+o.we}分に変更` }); p.we = +o.we; }
+    if (!Object.values(p.subj).includes("now")) return false;
+    if (created) p.hist.unshift({ t: now, by, txt: `学習プランを作成（受験日 ${fmtMD(parseDay(p.exam))}・受験日は設定で確認してください）` });
+    p.hist = p.hist.slice(-50); p.t = now;
+    if (created || subjChanged) p.b = { t: now, tried: targetQs(p).filter(q => stats[q.id]).length };
+    plan = p;
+    return true;
+  }
+  function applyReply(o) {
+    tf.imp[o.id] = Date.now();
+    if (o.c) tf.fb.push({ id: o.id, t: +o.t || Date.now(), fr: String(o.fr || "").slice(0, 30), txt: String(o.c).slice(0, 2000) });
+    (Array.isArray(o.a) ? o.a : []).forEach(a => { const x = cleanAsg(a, o); if (x && !tf.asg.some(y => y.id === x.id)) tf.asg.push(x); });
+    if ((o.sj && Object.keys(o.sj).length) || o.wd != null || o.we != null) applyTeacherPlan(o);
+    tf = mergeTf(tf, null);
+    saveLocal(); schedulePush();
+  }
+  async function readReplies(text) {
+    ensureMe();
+    const codes = findCodes(REPLY_PREFIX, text), res = [];
+    for (const [k, d] of codes) {
+      try {
+        const o = await unpackOne(k, d);
+        if (!o || !o.id) throw new Error("shape");
+        const st = tf.imp[o.id] ? "done" : (o.to === "*" || o.to === me.id) ? "ok" : "other";
+        res.push({ o, st });
+      } catch (e) { res.push({ st: e && e.message === "old" ? "old" : "bad" }); }
+    }
+    return { codes: codes.length, res };
+  }
+
+  // ---------- 生徒：先生に送る画面 ----------
+  let pendingReply = "";
+  function renderSend() {
+    session = null; current = null; ensureMe();
+    const fbs = tf.fb.slice().reverse(), asgs = tf.asg.slice().reverse();
+    $app.innerHTML = `
+      <button class="back" id="to-top" style="margin-bottom:14px">← トップ</button>
+      <div class="brand"><span class="badge">✉️ 先生とのやりとり</span></div>
+      <h1>先生に送る・先生から受け取る</h1>
+      <p class="lead">学習の状況をまとめた「レポートコード」を作って、LINEやメールで先生に送ります。先生から返信コードが届いたら、下に貼るとコメントと課題がアプリに入ります。</p>
+      ${fbs.length ? `<h2 class="section-title">先生からのメッセージ</h2><div class="fblist">${fbs.slice(0, 10).map(f => `<div class="fbitem"><div class="fbh"><b>${esc(f.fr || "先生")}</b><span>${fmtMD(f.t)}</span></div><div class="fbt">${nl(f.txt)}</div></div>`).join("")}</div>` : ""}
+      ${asgs.length ? `<h2 class="section-title">先生の課題<small>${asgs.filter(a => tf.done[a.id]).length} / ${asgs.length} 完了</small></h2>
+        <div class="asglist">${asgs.slice(0, 20).map(a => `<div class="asgrow${tf.done[a.id] ? " done" : ""}"><span>${tf.done[a.id] ? "✓" : "□"}</span><div><b>${esc(asgLabel(a))}</b>${asgNote(a) ? `<small>「${esc(asgNote(a))}」</small>` : ""}<small>${fmtMD(a.t)}に受け取り${a.due ? "・期限 " + fmtMD(parseDay(a.due)) : ""}${tf.done[a.id] ? "・" + fmtMD(tf.done[a.id]) + "に完了" : ""}</small></div>${tf.done[a.id] ? "" : `<button class="wbtn" data-run="${esc(a.id)}">${a.k === "free" ? "やった" : "始める"}</button>`}</div>`).join("")}</div>` : ""}
+      <h2 class="section-title">① 先生にレポートを送る</h2>
+      <div class="form">
+        <label class="fl">ニックネーム<small>本名でなくてかまいません。先生がわかる名前に</small></label>
+        <input id="s-nick" class="fi" maxlength="20" value="${esc(me.nick || "")}" placeholder="例：ゆうこ" style="width:100%">
+        <label class="fl">先生に見えるもの</label>
+        <ul class="sendlist">
+          <li>ニックネームと、レポートを作った日時</li>
+          <li>直近6週間の、日ごとの問題数・正答数・学習時間</li>
+          <li>科目ごとの成績（挑戦した数・正答率・合格ライン信号・最頻出テーマの理解度・復習の数）と苦手分野</li>
+          <li>間違いの理由の内訳、迷って正解した数</li>
+          <li>間違えた問題・迷って正解した問題の番号（先生のアプリで同じ問題を開くため）</li>
+          <li>模擬試験の結果、学習プラン（受験日・受験科目・段階・遅れ）、先生の課題が終わったかどうか</li>
+        </ul>
+        <p class="fh">送らないもの：本名・メールアドレス・端末の情報、1問ごとの解答の細かい記録。レポートはどこにも保存されず、コードを受け取った人だけが読めます。送り先をまちがえないようにしてください。</p>
+        <details class="howto" id="s-prevd"><summary>先生の画面での見え方を確認する</summary><div id="s-prev"></div></details>
+        <label class="ckrow consent"><input type="checkbox" id="s-ok"><span>内容を確認しました。先生に送ります</span></label>
+        <button class="btn dark wide" id="s-make" disabled>レポートコードを作る</button>
+        <p class="fh" id="s-msg"></p>
+        <div id="s-out"></div>
+      </div>
+      <h2 class="section-title" style="margin-top:22px">② 先生からの返信を取り込む</h2>
+      <div class="form" style="padding-top:12px">
+        <textarea id="s-in" class="fi codebox" placeholder="先生から届いた返信コード（HKT1:…）を貼り付け">${esc(pendingReply)}</textarea>
+        <div id="s-inres"></div>
+        <button class="btn dark wide" id="s-read" style="margin-top:8px">読み取る</button>
+      </div>
+      ${footer()}`;
+    document.getElementById("to-top").onclick = () => go(null);
+    $app.querySelectorAll("[data-run]").forEach(b => b.onclick = () => { const a = tf.asg.find(x => x.id === b.dataset.run); if (a) runAsg(a); });
+    const nick = document.getElementById("s-nick"), ok = document.getElementById("s-ok"), mk2 = document.getElementById("s-make"), msg = document.getElementById("s-msg");
+    const upd = () => { mk2.disabled = !ok.checked; };
+    ok.onchange = upd;
+    nick.onchange = () => { me.nick = nick.value.trim().slice(0, 20); me.t = Date.now(); saveLocal(); schedulePush(); };
+    document.getElementById("s-prevd").ontoggle = e => { if (e.target.open) { const r = buildReport(); r.nk = nick.value.trim() || "（ニックネーム）"; document.getElementById("s-prev").innerHTML = `<div class="tprev">${studentBodyHtml(r, { preview: true })}</div>`; } };
+    mk2.onclick = async () => {
+      const nv = nick.value.trim().slice(0, 20);
+      if (!nv) { msg.textContent = "ニックネームを入れてください。"; msg.style.color = "var(--wrong)"; nick.focus(); return; }
+      me.nick = nv; me.t = Date.now(); saveLocal(); schedulePush();
+      mk2.disabled = true; mk2.textContent = "作成中…";
+      const code = await pack(REP_PREFIX, buildReport());
+      msg.textContent = "";
+      document.getElementById("s-out").innerHTML = `<div class="codeout">${codeOutHtml(code, "r", "このコードを先生に送ってください。")}</div>`;
+      wireCodeOut(code, "r", `${nv}さんの学習レポート（保育士試験アプリ）`);
+      mk2.textContent = "作り直す"; mk2.disabled = false;
+    };
+    const readBtn = document.getElementById("s-read");
+    readBtn.onclick = async () => {
+      const box = document.getElementById("s-inres"), txt = document.getElementById("s-in").value;
+      const { codes, res } = await readReplies(txt);
+      if (!codes) { box.innerHTML = `<p class="fh" style="color:var(--wrong)">返信コード（HKT1:で始まるもの）が見つかりません。全体をコピーできているか確認してください。</p>`; return; }
+      const good = res.filter(x => x.st === "ok");
+      box.innerHTML = res.map(x => x.st === "ok" ? `<div class="rprev"><b>${esc(x.o.fr || "先生")}からの返信（${fmtMD(x.o.t)}${x.o.to === "*" ? "・クラス全員あて" : ""}）</b><span>${replySummary(x.o).map(esc).join("／") || "内容なし"}</span>${x.o.c ? `<div class="fbt">${nl(x.o.c)}</div>` : ""}${(x.o.a || []).map(a => `<div class="rpa">□ ${esc(asgLabel(a))}${asgNote(a) ? `「${esc(asgNote(a))}」` : ""}</div>`).join("")}</div>`
+        : `<p class="fh" style="color:var(--wrong)">${x.st === "done" ? "この返信はもう取り込んであります。" : x.st === "other" ? "別の生徒あての返信です（ニックネームのちがう人に届いたものかもしれません）。" : x.st === "old" ? "このブラウザでは読み取れません。Safari・Chromeを最新にしてください。" : "読み取れないコードがありました。"}</p>`).join("")
+        + (good.length ? `<button class="btn dark wide" id="s-apply" style="margin-top:8px;background:var(--accent);border-color:var(--accent)">取り込む</button>${good.some(x => x.o.sj || x.o.wd != null || x.o.we != null) ? `<p class="fh">受験科目・時間の変更は学習プランに反映され、変更履歴に「先生が変更」と残ります。あとから自分で設定を変えることもできます。</p>` : ""}` : "");
+      readBtn.style.display = good.length ? "none" : "";
+      const ap = document.getElementById("s-apply");
+      if (ap) ap.onclick = () => { good.forEach(x => applyReply(x.o)); pendingReply = ""; go(null); };
+    };
+    if (pendingReply) readBtn.onclick();
+    wireFooter();
+    document.title = "先生に送る｜保育士資格試験問題集";
+    window.scrollTo(0, 0);
+  }
+
+  // ---------- 指導者ページのデータ ----------
+  // sts: { 生徒ID: { rep 最新のレポート, sent:[送った返信], memo, goal } }, all: [クラス全員あての返信], tpl: 定型コメント
+  let tch = { name: "", sts: {}, all: [], tpl: null, t: 0 };
+  try { const raw = JSON.parse(localStorage.getItem(TEACHER_KEY) || "null"); if (raw && typeof raw === "object") tch = Object.assign(tch, raw); } catch (e) {}
+  const DEFAULT_TPL = [
+    "毎日続けられていますね。この調子でいきましょう！",
+    "復習がたまってきています。今週は「今日の復習」を先に片付けましょう。",
+    "最頻出テーマの理解度を上げると、合格ラインがぐっと近づきます。",
+    "模擬試験で6割を超えました。間違えた分野の要点をもう一度確認しましょう。",
+    "少し間があいています。1日10問からでいいので再開しましょう。",
+    "「読み違い」が多めです。「不適切なもの」に印をつけてから選ぶ習慣を。"
+  ];
+  const tplList = () => tch.tpl || DEFAULT_TPL;
+  let tpushTimer = null;
+  function saveTeacher() { tch.t = Date.now(); try { localStorage.setItem(TEACHER_KEY, JSON.stringify(tch)); } catch (e) {} clearTimeout(tpushTimer); tpushTimer = setTimeout(pushTeacher, 1200); }
+  function pushTeacher() { if (!tdocRef) return; tdocRef.set(plain(Object.assign({}, tch, { updatedAt: Date.now() }))).catch(() => {}); }
+  function absorbTeacher(b) {
+    if (!b || typeof b !== "object") return false;
+    const before = JSON.stringify(tch);
+    Object.entries(b.sts || {}).forEach(([id, x]) => {
+      if (!x || !x.rep) return;
+      const cur = tch.sts[id];
+      if (!cur) { tch.sts[id] = x; return; }
+      const sent = {}; (cur.sent || []).concat(x.sent || []).forEach(r => { if (r && r.id) sent[r.id] = r; });
+      tch.sts[id] = Object.assign({}, cur, (x.rep.t || 0) > (cur.rep.t || 0) ? { rep: x.rep } : {}, { sent: Object.values(sent).sort((p, q) => p.t - q.t).slice(-60),
+        memo: cur.memo || x.memo || "", goal: cur.goal || x.goal || "" });
+    });
+    const all = {}; (tch.all || []).concat(b.all || []).forEach(r => { if (r && r.id) all[r.id] = r; });
+    tch.all = Object.values(all).sort((p, q) => p.t - q.t).slice(-60);
+    if ((b.t || 0) > (tch.t || 0)) { if (b.name) tch.name = b.name; if (b.tpl) tch.tpl = b.tpl; }
+    const changed = JSON.stringify(tch) !== before;
+    if (changed) { try { localStorage.setItem(TEACHER_KEY, JSON.stringify(tch)); } catch (e) {} }
+    return changed;
+  }
+  async function importReports(text) {
+    const codes = findCodes(REP_PREFIX, text);
+    let ok = 0, ng = 0, old = 0, stale = 0;
+    const names = [];
+    for (const [k, d] of codes) {
+      try {
+        const r = await unpackOne(k, d);
+        if (!r || typeof r.id !== "string" || typeof r.t !== "number") throw new Error("shape");
+        r.nk = String(r.nk || "").slice(0, 20);
+        const cur = tch.sts[r.id];
+        if (cur && (cur.rep.t || 0) >= r.t) stale++;
+        else tch.sts[r.id] = Object.assign({ sent: [], memo: "", goal: "" }, cur, { rep: r });
+        ok++; names.push(r.nk || "名前なし");
+      } catch (e) { if (e && e.message === "old") old++; else ng++; }
+    }
+    if (ok) saveTeacher();
+    return { found: codes.length, ok, ng, old, stale, names };
+  }
+  let teacherMsg = "";
+  async function linkImport(code) {
+    const r = await importReports(code);
+    teacherMsg = r.ok ? `${r.names.map(esc).join("・")}さんのレポートを取り込みました${r.stale ? "（すでに同じか新しいレポートがありました）" : ""}。` : "リンクからレポートを読み取れませんでした。";
+    const one = r.ok === 1 ? Object.values(tch.sts).find(x => x.rep.nk === r.names[0]) : null;
+    replaceHash(one ? "teacher/s/" + one.rep.id : "teacher");
+    route();
+  }
+
+  // ---------- 指導者ページ：レポートから読み取る指標 ----------
+  function repMetrics(r) {
+    const keys = Object.keys(r.d || {}).filter(k => r.d[k][0]).sort();
+    const last = keys.length ? parseDay(keys[keys.length - 1]) : null;
+    const range = (a, b) => {
+      let n = 0, c = 0, min = 0, days = 0;
+      keys.forEach(k => { const age = Math.round((dayStart(r.t) - parseDay(k)) / DAY); if (age >= a && age < b) { n += r.d[k][0]; c += r.d[k][1]; min += r.d[k][2] || 0; days++; } });
+      return { n, c, min, days, rate: n ? Math.round(c / n * 100) : null };
+    };
+    const w1 = range(0, 7), prev = range(7, 28), m30 = range(0, 30);
+    const idle = last === null ? null : Math.round((today0() - last) / DAY);
+    const S = Object.values(r.s || {});
+    const due = S.reduce((a, x) => a + (x[5] || 0), 0), queued = S.reduce((a, x) => a + (x[4] || 0), 0);
+    const age = Math.round((today0() - dayStart(r.t)) / DAY);
+    const flags = [];
+    if (idle === null) flags.push(["idle", "学習の記録がまだありません"]);
+    else if (idle >= 3) flags.push(["idle", `${idle}日学習なし`]);
+    if (r.p && r.p.wn !== null && r.p.wn !== undefined) flags.push(["lag", `このペースだと実戦が${r.p.wn}日しか取れません`]);
+    else if (r.p && r.p.big) flags.push(["lag", `計画より${r.p.lag}問遅れ`]);
+    if (w1.n >= 20 && prev.n >= 20 && prev.rate - w1.rate >= 10) flags.push(["drop", `正答率が下がっています（${prev.rate}%→${w1.rate}%）`]);
+    if (due >= 30) flags.push(["rv", `復習が${due}問たまっています`]);
+    if (age >= 7) flags.push(["old", `レポートが${age}日前のものです`]);
+    return { last, idle, w1, prev, m30, due, queued, age, flags };
+  }
+  const repTargets = r => r.p ? SUBJ.filter((S, i) => r.p.sj[i] === "n").map(S => S.id) : Object.keys(r.s || {});
+  const sgOf = x => ({ lv: x[6] || 0, label: ["データ不足", "要強化", "もう一歩", "合格圏"][x[6] || 0], tip: "" });
+  const repLog = r => Object.fromEntries(Object.entries(r.d || {}).map(([k, v]) => [k, { n: v[0], c: v[1] }]));
+  const asgStatus = (a, r) => r && r.a && r.a[a.id] ? `<span class="tdone">✓ ${fmtMD(r.a[a.id])} 完了</span>` : `<span class="tpend">未完了</span>`;
+
+  // 生徒の詳細（指導者ページ・生徒の確認画面・面談レポートで共通）
+  function studentBodyHtml(r, opt) {
+    opt = opt || {};
+    const M = repMetrics(r), tg = repTargets(r);
+    const rs = r.r || {}, rTot = (rs.k || 0) + (rs.y || 0) + (rs.m || 0) + (rs.u || 0);
+    const mocks = {}; (r.mk || []).forEach(m => { (mocks[m[0]] = mocks[m[0]] || []).push(m); });
+    const qlist = (ids, max) => {
+      const qs = (ids || []).map(id => qById[id]).filter(Boolean);
+      return qs.slice(0, max).map(q => `<details class="missed-item"><summary><small class="tsub">${esc(subjById[subjOfQ[q.id]].name)}・${esc(catOf(q).name)}</small> ${esc(shortQ(q))}</summary><div class="sb">${factsHtml(q)}<p class="ex">${esc(q.e)}</p></div></details>`).join("")
+        + (qs.length > max ? `<p class="fh">ほか${qs.length - max}問</p>` : "");
+    };
+    const p = r.p;
+    return `
+      <div class="overall">
+        <div class="stat"><div class="num">${M.w1.n}</div><div class="lbl">この7日間の問題数</div></div>
+        <div class="stat"><div class="num">${M.w1.rate === null ? "–" : M.w1.rate + "%"}</div><div class="lbl">7日間の正答率${M.prev.rate !== null ? `<br><small>その前3週 ${M.prev.rate}%</small>` : ""}</div></div>
+        <div class="stat"><div class="num">${M.w1.min}<small style="font-size:13px">分</small></div><div class="lbl">7日間の学習時間</div></div>
+      </div>
+      ${M.flags.length && !opt.preview ? `<div class="warn soft">${M.flags.map(f => `<div>⚠ ${esc(f[1])}</div>`).join("")}</div>` : ""}
+      <p class="note" style="margin:-8px 2px 14px">最後に学習した日：${M.last ? fmtMD(M.last) + "（" + ago(M.last) + "）" : "なし"}・通算 ${r.tot || 0}問・レポート作成 ${fmtDT(r.t)}（${ago(r.t)}）</p>
+      ${calendarHtml(8, repLog(r))}
+      <h2 class="section-title">学習プラン</h2>
+      ${p ? `<div class="olbox">
+        <div><span>受験日</span><b>${fmtMD(parseDay(p.ex))}</b><small>${dateJa(p.ex)}・あと${daysTo(p.ex)}日・${esc((TEMPLATES[p.tpl] || TEMPLATES.half).name)}</small></div>
+        <div><span>いまの段階</span><b><span class="phase p${p.ph}">${PH[p.ph]}期</span></b><small>${PH_DESC[p.ph]}</small></div>
+        <div><span>計画との差</span><b>${p.lag ? p.lag + "問遅れ" : "予定どおり"}</b><small>${p.wn !== null && p.wn !== undefined ? `このペースだと実戦が${p.wn}日しか取れません。` : ""}基礎の残り ${p.un}問・1日の目安 ${p.cap}問（平日${p.wd}分・週末${p.we}分）${p.goal ? "・基礎を終える日 " + fmtMD(parseDay(p.goal)) : ""}</small></div>
+        <div><span>受験科目</span><b>${tg.length}科目</b><small>今回：${tg.map(id => esc(subjById[id].name)).join("・") || "なし"}${SUBJ.some((S, i) => p.sj[i] === "l") ? `<br>次の回：${SUBJ.filter((S, i) => p.sj[i] === "l").map(S => esc(S.name)).join("・")}` : ""}${SUBJ.some((S, i) => p.sj[i] === "p") ? `<br>免除：${SUBJ.filter((S, i) => p.sj[i] === "p").map(S => esc(S.name)).join("・")}` : ""}</small></div>
+      </div>` : `<p class="note">学習プランはまだ作っていません。返信で受験科目を指定すると、プランが作られます。</p>`}
+      <h2 class="section-title">科目ごとの状況<small>合格ライン（6割）に届きそうか</small></h2>
+      <div class="sgrid">${SUBJ.filter(S => (r.s || {})[S.id]).map(S => { const x = r.s[S.id];
+        return `<div class="srow"><span class="sn">${S.icon} ${esc(S.name)}${tg.includes(S.id) ? "" : ' <small class="tsub">今回は受験しない</small>'}</span>${sigDot(sgOf(x))}
+          <span class="sd2">挑戦 ${x[0]}/${x[1]}・正答率 ${x[7] === null ? "–" : x[7] + "%"}・最頻出の理解度 ${x[8] === null ? "–" : x[8] + "%"}${x[9] !== null ? "・模試 " + x[9] + "%" : ""}・復習中 ${x[4]}問${x[5] ? `（今日の分 ${x[5]}）` : ""}${mocks[S.id] ? `<br>模擬試験：${mocks[S.id].slice(-5).map(m => Math.round(m[3] / m[2] * 100) + "%").join(" → ")}（最新 ${fmtMD(mocks[S.id][mocks[S.id].length - 1][1])}）` : ""}</span>
+          <span class="bar"><i style="width:${Math.round(x[0] / x[1] * 100)}%"></i></span></div>`; }).join("") || `<p class="note">まだ問題を解いていません。</p>`}</div>
+      ${(r.wk || []).length ? `<h2 class="section-title" style="margin-top:18px">苦手分野<small>4回以上解いて正答率70%未満</small></h2>
+        <div class="phtable">${r.wk.map(w => { const S = subjById[w[0]], c = S && S.categories.find(x => x.id === w[1]); return c ? `<div class="phrow"><span>${c.icon} ${esc(c.name)}<small class="tsub"> ${esc(S.name)}</small></span><span></span><b style="color:var(--wrong)">${w[2]}%</b></div>` : ""; }).join("")}</div>` : ""}
+      <h2 class="section-title" style="margin-top:18px">間違いの理由<small>この30日・本人の記録</small></h2>
+      ${rTot ? `<div class="reasons">${REASONS.map(([k, t]) => `<div><span>${t}</span><i style="width:${Math.round((rs[k] || 0) / rTot * 100)}%"></i><b>${rs[k] || 0}</b></div>`).join("")}</div>
+        <p class="fh">${(rs.k || 0) + (rs.y || 0) >= (rs.m || 0) + (rs.u || 0) ? "知識不足（知らなかった・うろ覚え）が中心です。要点を読んでから解く流れが合っています。" : "読み違い・うっかりが中心です。知識はあるので、問題文の読み方の練習が効きます。"}</p>` : `<p class="note">記録がありません。</p>`}
+      <p class="note">迷って正解した問題：この30日で${r.g || 0}問</p>
+      ${(r.x || []).length ? `<h2 class="section-title" style="margin-top:18px">間違えたまま・復習中の問題<small>${r.x.length}問</small></h2><div class="missed">${qlist(r.x, opt.preview ? 5 : 12)}</div>` : ""}
+      ${(r.gq || []).length && !opt.preview ? `<h2 class="section-title">迷って正解した問題</h2><div class="missed">${qlist(r.gq, 8)}</div>` : ""}`;
+  }
+
+  // ---------- 指導者ページ：トップ（一覧） ----------
+  function renderTeacher() {
+    session = null; current = null;
+    const list = Object.values(tch.sts).map(x => ({ x, M: repMetrics(x.rep) })).sort((a, b) => (a.x.rep.nk || "").localeCompare(b.x.rep.nk || "", "ja"));
+    const need = list.filter(o => o.M.flags.some(f => f[0] !== "old")).sort((a, b) => b.M.flags.length - a.M.flags.length);
+    const msg = teacherMsg; teacherMsg = "";
+    $app.innerHTML = `
+      <button class="back" id="to-top" style="margin-bottom:14px">← トップ</button>
+      <div class="brand"><span class="badge">👩‍🏫 指導者ページ</span></div>
+      <h1>指導者ページ（先生用）</h1>
+      <p class="lead">生徒から届いたレポートコードを貼ると、学習の状況が一覧で見られます。コメント・課題・受験科目の変更は「返信コード」にして生徒に送ります。</p>
+      <div class="form" style="padding-top:12px">
+        <label class="fl" style="margin-top:0">生徒から届いたレポートを取り込む<small>複数まとめて貼ってもかまいません</small></label>
+        <textarea id="t-in" class="fi codebox" placeholder="レポートコード（HKR1:…）やリンクを貼り付け"></textarea>
+        <button class="btn dark wide" id="t-imp" style="margin-top:8px">取り込む</button>
+        <p class="fh" id="t-msg" style="${msg ? "color:var(--accent)" : ""}">${msg}</p>
+        <label class="fl">返信に表示する先生の名前</label>
+        <input id="t-name" class="fi" maxlength="20" value="${esc(tch.name || "")}" placeholder="例：山田先生" style="width:100%">
+      </div>
+      ${!list.length ? `<div class="notecard" style="margin-top:18px"><b>使い方</b><ol class="steps">
+          <li>生徒が、アプリのトップ →「先生に送る」でレポートコードを作り、LINEやメールで先生に送ります。</li>
+          <li>届いたコード（またはリンク）を上の欄に貼って「取り込む」。</li>
+          <li>生徒を選ぶと、科目ごとの状況・苦手分野・間違いの理由が見られます。コメントや課題を書いて「返信コードを作る」。</li>
+          <li>返信コードを生徒に送ると、生徒のアプリにコメントと課題が入ります。</li></ol>
+        <p class="fh">取り込んだレポートは、この端末（claude.ai版でログインしているときはあなたのアカウント）にだけ保存されます。</p></div>` : ""}
+      ${need.length ? `<h2 class="section-title" style="margin-top:20px">声かけが必要な生徒<small>${need.length}人</small></h2>
+        <div class="tneed">${need.map(o => `<button class="tnrow" data-st="${esc(o.x.rep.id)}"><b>${esc(o.x.rep.nk || "名前なし")}</b><span>${o.M.flags.filter(f => f[0] !== "old").map(f => `<i class="tf ${f[0]}">${esc(f[1])}</i>`).join("")}</span></button>`).join("")}</div>` : ""}
+      ${list.length ? `<h2 class="section-title" style="margin-top:20px">クラス一覧<small>${list.length}人</small></h2>
+        <div class="tlist">${list.map(({ x, M }) => { const r = x.rep, tg = repTargets(r), pend = (x.sent || []).concat(tch.all || []).flatMap(s => s.a || []).filter(a => !(r.a || {})[a.id]).length;
+          return `<button class="tst" data-st="${esc(r.id)}">
+            <span class="tn">${esc(r.nk || "名前なし")}${M.flags.length ? `<i class="tfc">${M.flags.length}</i>` : ""}</span>
+            <span class="tm">最終学習 ${M.last ? fmtMD(M.last) + "（" + ago(M.last) + "）" : "なし"}・今週 ${M.w1.n}問・正答率 ${M.w1.rate === null ? "–" : M.w1.rate + "%"}</span>
+            <span class="tm">${r.p ? `<span class="phase p${r.p.ph}">${PH[r.p.ph]}期</span> あと${daysTo(r.p.ex)}日・${r.p.lag ? r.p.lag + "問遅れ" : "予定どおり"}` : "プランなし"}${pend ? `・課題 未完了${pend}` : ""}・レポート ${ago(r.t)}</span>
+            <span class="tsig">${tg.filter(id => (r.s || {})[id]).map(id => `<span class="sig s${r.s[id][6] || 0}"><i></i>${SHORT[id]}</span>`).join("")}</span>
+          </button>`; }).join("")}</div>
+        <div class="tools" style="margin-top:14px">
+          <button class="tool" data-go="teacher/class"><span>📊</span><b>クラス共通のつまずき</b><small>多くの生徒が間違えている問題・分野</small></button>
+          <button class="tool" data-go="teacher/all"><span>📣</span><b>クラス全員に返信</b><small>同じコメント・課題を全員に</small></button>
+        </div>` : ""}
+      <details class="howto" style="margin-top:18px"><summary>定型コメントを編集する</summary>
+        <p>よく使う励ましや助言を1行に1つ書きます。返信を書くときに一押しで入れられます。</p>
+        <textarea id="t-tpl" class="fi" style="width:100%;height:150px">${esc(tplList().join("\n"))}</textarea>
+        <button class="btn wide" id="t-tplsave" style="margin-top:6px">保存</button></details>
+      <details class="howto"><summary>指導者ページのデータを別の端末へ移す・削除する</summary>
+        <p>取り込んだレポートと送った返信を、コードにして別の端末へ移せます。</p>
+        <button class="btn wide" id="t-bk">バックアップのコードを作る</button><div id="t-bkout"></div>
+        <textarea id="t-bkin" class="fi codebox" placeholder="バックアップのコード（HKB1:…）を貼り付け" style="margin-top:8px"></textarea>
+        <button class="btn wide" id="t-bkload" style="margin-top:6px">読み込む</button>
+        <button class="link-btn" id="t-clear" style="margin-top:10px;color:var(--wrong)">指導者ページのデータをすべて削除</button></details>
+      ${footer()}`;
+    document.getElementById("to-top").onclick = () => go(null);
+    $app.querySelectorAll("[data-st]").forEach(b => b.onclick = () => go("teacher/s/" + b.dataset.st));
+    $app.querySelectorAll("[data-go]").forEach(b => b.onclick = () => go(b.dataset.go));
+    document.getElementById("t-name").onchange = e => { tch.name = e.target.value.trim().slice(0, 20); saveTeacher(); };
+    document.getElementById("t-imp").onclick = async () => {
+      const r = await importReports(document.getElementById("t-in").value);
+      teacherMsg = !r.found ? "" : r.ok ? `${r.names.map(esc).join("・")}さんのレポートを取り込みました。${r.stale ? `（${r.stale}件は、すでに同じか新しいレポートがありました）` : ""}${r.ng ? `読み取れないコードが${r.ng}件ありました。` : ""}` : "";
+      if (!r.ok) { const m = document.getElementById("t-msg"); m.style.color = "var(--wrong)"; m.textContent = !r.found ? "レポートコード（HKR1:で始まるもの）が見つかりません。" : r.old ? "このブラウザでは読み取れません。Safari・Chromeを最新にしてください。" : "コードを読み取れませんでした。全体をコピーできているか確認してください。"; return; }
+      renderTeacher();
+    };
+    document.getElementById("t-tplsave").onclick = e => { tch.tpl = document.getElementById("t-tpl").value.split("\n").map(x => x.trim()).filter(Boolean).slice(0, 30); saveTeacher(); e.target.textContent = "保存しました ✓"; };
+    document.getElementById("t-bk").onclick = async () => {
+      const code = await pack(TBK_PREFIX, tch);
+      document.getElementById("t-bkout").innerHTML = `<div class="codeout">${codeOutHtml(code, "", "別の端末の指導者ページで読み込んでください。生徒の記録が入っているので、扱いに気をつけてください。")}</div>`;
+      wireCodeOut(code, "", "指導者ページのバックアップ");
+      const l = document.getElementById("co-link"); if (l) l.remove();
+      const sh = document.getElementById("co-share"); if (sh) sh.remove();
+    };
+    document.getElementById("t-bkload").onclick = async e => {
+      const c = findCodes(TBK_PREFIX, document.getElementById("t-bkin").value)[0];
+      try { if (!c) throw 0; absorbTeacher(Object.assign(await unpackOne(c[0], c[1]), { t: 0 })); saveTeacher(); teacherMsg = "バックアップを読み込みました。"; renderTeacher(); }
+      catch (err) { e.target.textContent = "読み取れませんでした"; }
+    };
+    const clr = document.getElementById("t-clear");
+    clr.onclick = () => { if (!clr.dataset.c) { clr.dataset.c = 1; clr.textContent = "もう一度押すと削除します（元に戻せません）"; return; } tch = { name: tch.name, sts: {}, all: [], tpl: tch.tpl, t: Date.now() }; saveTeacher(); renderTeacher(); };
+    wireFooter();
+    document.title = "指導者ページ｜保育士資格試験問題集";
+    window.scrollTo(0, 0);
+  }
+
+  // ---------- 指導者ページ：返信を書く ----------
+  const drafts = {};
+  let presetAsg = null; // クラス共通のつまずきから「全員の課題にする」
+  const MINS = [0, 15, 30, 45, 60, 90, 120, 180, 240];
+  const minLabel = v => v < 60 ? v + "分" : (v / 60) + "時間" + (v % 60 ? "半" : "");
+  function composerHtml(key, r) {
+    const dr = drafts[key];
+    const S = subjById[dr.nb.sid] || SUBJ[0];
+    const ths = (S.themes || []).filter(t => t.qs.length).sort((a, b) => b.exam - a.exam);
+    const base = r && r.p ? Object.fromEntries(SUBJ.map((s, i) => [s.id, SJ_FROM[r.p.sj[i]] || "now"])) : Object.fromEntries(SUBJ.map(s => [s.id, "now"]));
+    const k = dr.nb.k;
+    return `<div class="form comp">
+      <label class="fl">コメント</label>
+      <textarea id="c-text" class="fi" style="width:100%;height:110px" maxlength="2000" placeholder="例：社会的養護、伸びてますね。今週は福祉系の復習を中心に。">${esc(dr.c)}</textarea>
+      <div class="chips">${tplList().map((t, i) => `<button class="chip tplc" data-tpl="${i}">${esc(t.length > 18 ? t.slice(0, 18) + "…" : t)}</button>`).join("")}</div>
+      <label class="fl">課題<small>生徒の「今日のメニュー」に入ります</small></label>
+      ${dr.a.length ? `<div class="asglist">${dr.a.map((a, i) => `<div class="asgrow"><span>□</span><div><b>${esc(asgLabel(a))}</b>${asgNote(a) ? `<small>「${esc(asgNote(a))}」</small>` : ""}${a.due ? `<small>期限 ${fmtMD(parseDay(a.due))}</small>` : ""}</div><button class="wbtn" data-adel="${i}">削除</button></div>`).join("")}</div>` : ""}
+      <div class="nb">
+        <select id="nb-k" class="fi">${[["cat", "分野の問題を解く"], ["theme", "頻出テーマの特訓"], ["mock", "模擬試験"], ["note", "分野の要点を読む"], ["rv", "今日の復習を片付ける"], ["free", "自由課題（文章で指示）"]].map(([v, t]) => `<option value="${v}"${k === v ? " selected" : ""}>${t}</option>`).join("")}</select>
+        ${k === "rv" || k === "free" ? "" : `<select id="nb-s" class="fi">${SUBJ.map(s => `<option value="${s.id}"${s.id === S.id ? " selected" : ""}>${esc(s.name)}</option>`).join("")}</select>`}
+        ${k === "cat" || k === "note" ? `<select id="nb-c" class="fi">${S.categories.filter(c => S.questions.some(q => q.c === c.id)).map(c => `<option value="${c.id}"${c.id === dr.nb.c ? " selected" : ""}>${esc(c.name)}</option>`).join("")}</select>` : ""}
+        ${k === "theme" ? `<select id="nb-th" class="fi">${ths.map(t => `<option value="${t.id}"${t.id === dr.nb.th ? " selected" : ""}>${t.exam >= 8 ? "🔥" : ""}${esc(t.name.replace(/（.*$/, ""))}</option>`).join("")}</select>` : ""}
+        ${k === "cat" || k === "theme" ? `<select id="nb-n" class="fi">${[5, 10, 15, 20, 30].map(n => `<option value="${n}"${+dr.nb.n === n ? " selected" : ""}>${n}問</option>`).join("")}</select>` : ""}
+        <input id="nb-txt" class="fi" maxlength="300" placeholder="${k === "free" ? "例：保育所保育指針の第1章を音読する" : "ひとこと（任意）例：要点を読んでから"}" value="${esc(dr.nb.txt || "")}">
+        <span class="row2"><span>期限（任意）</span><input type="date" id="nb-due" class="fi" value="${esc(dr.nb.due || "")}"></span>
+        <button class="btn" id="nb-add">＋ 課題を追加</button>
+      </div>
+      ${r !== undefined ? `<details class="howto"${dr.sjOpen ? " open" : ""} id="c-sjd"><summary>計画の調整（受験科目・1日の時間）</summary>
+        <p>変えたいところだけ選びます。生徒が返信を取り込むと学習プランに反映され、履歴に「先生が変更」と残ります。${r && r.p ? "" : "この生徒はまだプランがないので、取り込むとプランが作られます。"}</p>
+        <div class="subjset">${SUBJ.map(s => { const v = dr.sj[s.id] || base[s.id]; return `<div class="ss"><span>${s.icon} ${esc(s.name)}${dr.sj[s.id] ? ' <small class="chg">変更</small>' : ""}</span><span class="seg">${["now", "later", "pass"].map(x => `<button class="${v === x ? "on" : ""}" data-csj="${s.id}" data-v="${x}">${SJ_NAME[x]}</button>`).join("")}</span></div>`; }).join("")}</div>
+        <div class="row2" style="margin-top:8px"><span>平日</span><select id="c-wd" class="fi"><option value="">変えない${r && r.p ? `（${minLabel(r.p.wd)}）` : ""}</option>${MINS.map(v => `<option value="${v}"${dr.wd === String(v) ? " selected" : ""}>${minLabel(v)}</option>`).join("")}</select>
+          <span>週末</span><select id="c-we" class="fi"><option value="">変えない${r && r.p ? `（${minLabel(r.p.we)}）` : ""}</option>${MINS.map(v => `<option value="${v}"${dr.we === String(v) ? " selected" : ""}>${minLabel(v)}</option>`).join("")}</select></div>
+      </details>` : ""}
+      <button class="btn dark wide" id="c-make" style="margin-top:12px">返信コードを作る</button>
+      <p class="fh" id="c-msg"></p>
+      <div id="c-out"></div>
+    </div>`;
+  }
+  function wireComposer(key, r, to, onSent) {
+    const dr = drafts[key], rerender = () => { const y = window.scrollY; onSent(null); window.scrollTo(0, y); };
+    const q = id => document.getElementById(id);
+    const keepText = () => { dr.c = q("c-text").value; dr.nb.txt = q("nb-txt").value; dr.nb.due = q("nb-due").value; };
+    q("c-text").oninput = e => { dr.c = e.target.value; };
+    $app.querySelectorAll("[data-tpl]").forEach(b => b.onclick = () => { const t = tplList()[+b.dataset.tpl]; const ta = q("c-text"); ta.value = (ta.value ? ta.value.replace(/\s*$/, "") + "\n" : "") + t; dr.c = ta.value; });
+    const sel = (id, f) => { const el = q(id); if (el) el.onchange = e => { keepText(); f(e.target.value); rerender(); }; };
+    sel("nb-k", v => { dr.nb.k = v; });
+    sel("nb-s", v => { dr.nb.sid = v; dr.nb.c = null; dr.nb.th = null; });
+    sel("nb-c", v => { dr.nb.c = v; });
+    sel("nb-th", v => { dr.nb.th = v; });
+    sel("nb-n", v => { dr.nb.n = +v; });
+    q("nb-add").onclick = () => {
+      keepText();
+      const nb = dr.nb, S = subjById[nb.sid] || SUBJ[0];
+      if (nb.k === "free" && !nb.txt.trim()) { q("nb-txt").focus(); q("nb-txt").placeholder = "自由課題の内容を書いてください"; return; }
+      const a = { id: rid(), k: nb.k, n: nb.n || 10, txt: (nb.txt || "").trim(), due: nb.due || "" };
+      if (!["rv", "free"].includes(nb.k)) a.sid = S.id;
+      if (nb.k === "cat" || nb.k === "note") a.c = q("nb-c").value;
+      if (nb.k === "theme") { a.th = q("nb-th").value; if (!a.th) return; }
+      dr.a.push(a);
+      nb.txt = ""; nb.due = "";
+      rerender();
+    };
+    $app.querySelectorAll("[data-adel]").forEach(b => b.onclick = () => { keepText(); dr.a.splice(+b.dataset.adel, 1); rerender(); });
+    $app.querySelectorAll("[data-csj]").forEach(b => b.onclick = () => {
+      keepText(); dr.sjOpen = true;
+      const base = r && r.p ? SJ_FROM[r.p.sj[SUBJ.findIndex(s => s.id === b.dataset.csj)]] : "now";
+      if (b.dataset.v === base) delete dr.sj[b.dataset.csj]; else dr.sj[b.dataset.csj] = b.dataset.v;
+      rerender();
+    });
+    const sd = q("c-sjd"); if (sd) sd.ontoggle = () => { dr.sjOpen = sd.open; };
+    if (q("c-wd")) { q("c-wd").onchange = e => { dr.wd = e.target.value; }; q("c-we").onchange = e => { dr.we = e.target.value; }; }
+    q("c-make").onclick = async () => {
+      keepText();
+      const msg = q("c-msg");
+      const sj = Object.keys(dr.sj).length ? Object.assign({}, dr.sj) : null;
+      if (sj) { const base = r && r.p ? Object.fromEntries(SUBJ.map((s, i) => [s.id, SJ_FROM[r.p.sj[i]]])) : Object.fromEntries(SUBJ.map(s => [s.id, "now"])); if (!SUBJ.some(s => (sj[s.id] || base[s.id]) === "now")) { msg.style.color = "var(--wrong)"; msg.textContent = "「今回」の受験科目を1つ以上残してください。"; return; } }
+      if (!dr.c.trim() && !dr.a.length && !sj && !dr.wd && !dr.we) { msg.style.color = "var(--wrong)"; msg.textContent = "コメントか課題を入れてください。"; return; }
+      const o = { v: 1, id: rid(), to, t: Date.now(), fr: tch.name || "", c: dr.c.trim(), a: dr.a.map(a => Object.assign({}, a)) };
+      if (sj) o.sj = sj;
+      if (dr.wd) o.wd = +dr.wd;
+      if (dr.we) o.we = +dr.we;
+      const code = await pack(REPLY_PREFIX, o);
+      const rec = { id: o.id, t: o.t, c: o.c, a: o.a, sj: o.sj || null, wd: o.wd, we: o.we };
+      if (to === "*") tch.all = (tch.all || []).concat(rec).slice(-60);
+      else { const x = tch.sts[to]; x.sent = (x.sent || []).concat(rec).slice(-60); }
+      saveTeacher();
+      delete drafts[key];
+      onSent(code);
+    };
+  }
+  const newDraft = () => ({ c: "", a: [], sj: {}, wd: "", we: "", nb: { k: "cat", sid: SUBJ[0].id, c: null, th: null, n: 10, txt: "", due: "" } });
+  function sentHtml(sent, r) {
+    if (!sent.length) return "";
+    return `<h2 class="section-title" style="margin-top:20px">送った返信</h2><div class="fblist">${sent.slice().reverse().slice(0, 12).map(s => `<div class="fbitem"><div class="fbh"><b>${fmtDT(s.t)}</b><span>${s.sj ? "受験科目の変更あり" : ""}</span></div>
+      ${s.c ? `<div class="fbt">${nl(s.c)}</div>` : ""}${(s.a || []).map(a => `<div class="rpa">${esc(asgLabel(a))}${asgNote(a) ? `「${esc(asgNote(a))}」` : ""} ${r ? asgStatus(a, r) : ""}</div>`).join("")}</div>`).join("")}</div>`;
+  }
+
+  // ---------- 指導者ページ：生徒の詳細 ----------
+  function renderTStudent(id, code) {
+    session = null; current = null;
+    const x = tch.sts[id], r = x.rep;
+    if (!drafts[id]) drafts[id] = newDraft();
+    const own = (x.sent || []), cls = (tch.all || []).filter(s => s.t > 0);
+    const allAsg = own.concat(cls).flatMap(s => s.a || []);
+    const pend = allAsg.filter(a => !(r.a || {})[a.id]);
+    $app.innerHTML = `
+      <button class="back" id="to-t" style="margin-bottom:14px">← クラス一覧</button>
+      <div class="brand"><span class="badge">👩‍🏫 指導者ページ</span></div>
+      <h1>${esc(r.nk || "名前なし")}さん</h1>
+      <p class="lead">レポート ${fmtDT(r.t)}（${ago(r.t)}）　<button class="link-btn" id="t-print">🖨 面談用の1枚レポート</button></p>
+      ${studentBodyHtml(r)}
+      ${allAsg.length ? `<h2 class="section-title" style="margin-top:18px">出した課題<small>${allAsg.length - pend.length} / ${allAsg.length} 完了（このレポート時点）</small></h2>
+        <div class="asglist">${allAsg.slice().reverse().slice(0, 20).map(a => `<div class="asgrow${(r.a || {})[a.id] ? " done" : ""}"><span>${(r.a || {})[a.id] ? "✓" : "□"}</span><div><b>${esc(asgLabel(a))}</b>${asgNote(a) ? `<small>「${esc(asgNote(a))}」</small>` : ""}<small>${cls.some(s => (s.a || []).includes(a)) ? "クラス全員あて・" : ""}${a.due ? "期限 " + fmtMD(parseDay(a.due)) + "・" : ""}${asgStatus(a, r)}</small></div></div>`).join("")}</div>` : ""}
+      <h2 class="section-title" style="margin-top:20px">✉️ ${esc(r.nk || "")}さんに返信する</h2>
+      ${code ? `<div class="codeout" style="margin-bottom:12px"><b>返信コードができました</b>${codeOutHtml(code, "f", "このコードを生徒に送ってください。生徒が「先生に送る」画面に貼ると取り込めます。")}<button class="btn wide" id="c-new" style="margin-top:8px">続けて別の返信を書く</button></div>` : composerHtml(id, r)}
+      <label class="fl">先生のメモ<small>生徒には送られません</small></label>
+      <textarea id="t-memo" class="fi" style="width:100%;height:70px">${esc(x.memo || "")}</textarea>
+      ${sentHtml(own, r)}
+      <button class="link-btn" id="t-del" style="margin-top:18px;color:var(--wrong)">この生徒のデータを削除</button>
+      ${footer()}`;
+    document.getElementById("to-t").onclick = () => go("teacher");
+    document.getElementById("t-print").onclick = () => go("teacher/print/" + id);
+    document.getElementById("t-memo").onchange = e => { x.memo = e.target.value.slice(0, 2000); saveTeacher(); };
+    if (code) { wireCodeOut(code, "f", `${tch.name || "先生"}からの返信（保育士試験アプリ）`); document.getElementById("c-new").onclick = () => renderTStudent(id); }
+    else wireComposer(id, r, id, c => renderTStudent(id, c));
+    const del = document.getElementById("t-del");
+    del.onclick = () => { if (!del.dataset.c) { del.dataset.c = 1; del.textContent = "もう一度押すと削除します"; return; } delete tch.sts[id]; saveTeacher(); go("teacher"); };
+    wireFooter();
+    document.title = `${r.nk || "生徒"}｜指導者ページ`;
+    if (!code) window.scrollTo(0, 0); else setTimeout(() => { const o = document.querySelector(".codeout"); if (o) o.scrollIntoView({ block: "center" }); }, 30);
+  }
+
+  // ---------- 指導者ページ：クラス全員に返信 ----------
+  function renderTAll(code) {
+    session = null; current = null;
+    if (!drafts["*"]) drafts["*"] = newDraft();
+    if (presetAsg) { drafts["*"].a.push(Object.assign({ id: rid() }, presetAsg)); presetAsg = null; }
+    $app.innerHTML = `
+      <button class="back" id="to-t" style="margin-bottom:14px">← クラス一覧</button>
+      <div class="brand"><span class="badge">👩‍🏫 指導者ページ</span></div>
+      <h1>クラス全員に返信</h1>
+      <p class="lead">同じコメント・課題を、誰でも取り込める返信コードにします。グループLINEなどで送れます（受験科目の変更は生徒ごとの返信でおこないます）。</p>
+      ${code ? `<div class="codeout"><b>返信コードができました</b>${codeOutHtml(code, "f", "クラスのグループなどに送ってください。")}<button class="btn wide" id="c-new" style="margin-top:8px">続けて別の返信を書く</button></div>` : composerHtml("*", undefined)}
+      ${sentHtml(tch.all || [], null)}
+      ${footer()}`;
+    document.getElementById("to-t").onclick = () => go("teacher");
+    if (code) { wireCodeOut(code, "f", `${tch.name || "先生"}からクラスへの返信（保育士試験アプリ）`); document.getElementById("c-new").onclick = () => renderTAll(); }
+    else wireComposer("*", undefined, "*", c => renderTAll(c));
+    wireFooter();
+    document.title = "クラス全員に返信｜指導者ページ";
+    window.scrollTo(0, 0);
+  }
+
+  // ---------- 指導者ページ：クラス共通のつまずき ----------
+  function renderTClass() {
+    session = null; current = null;
+    const sts = Object.values(tch.sts).map(x => x.rep), N = sts.length;
+    const qn = {}, cat = {};
+    sts.forEach(r => {
+      new Set(r.x || []).forEach(id => { const q = qById[id]; if (!q) return; qn[id] = (qn[id] || 0) + 1; const k = subjOfQ[id] + "/" + q.c; (cat[k] = cat[k] || { st: new Set(), q: 0, rates: [] }).st.add(r.id); cat[k].q++; });
+      (r.wk || []).forEach(w => { const k = w[0] + "/" + w[1]; (cat[k] = cat[k] || { st: new Set(), q: 0, rates: [] }).rates.push(w[2]); cat[k].st.add(r.id); });
+    });
+    const topQ = Object.entries(qn).sort((a, b) => b[1] - a[1]).slice(0, 15);
+    const topC = Object.entries(cat).sort((a, b) => b[1].st.size - a[1].st.size || b[1].q - a[1].q).slice(0, 10);
+    const subjAvg = SUBJ.map(S => { const xs = sts.map(r => (r.s || {})[S.id]).filter(x => x && x[0]); if (!xs.length) return null;
+      const rates = xs.map(x => x[7]).filter(v => v !== null), lv = [0, 0, 0, 0]; xs.forEach(x => lv[x[6] || 0]++);
+      return { S, n: xs.length, rate: rates.length ? Math.round(rates.reduce((a, b) => a + b, 0) / rates.length) : null, lv }; }).filter(Boolean);
+    $app.innerHTML = `
+      <button class="back" id="to-t" style="margin-bottom:14px">← クラス一覧</button>
+      <div class="brand"><span class="badge">👩‍🏫 指導者ページ</span></div>
+      <h1>クラス共通のつまずき</h1>
+      <p class="lead">取り込んだ${N}人のレポートから集計しました。授業で取り上げる内容を選ぶのに使えます。</p>
+      ${subjAvg.length ? `<h2 class="section-title">科目ごとの状況</h2><div class="phtable">${subjAvg.map(o => `<div class="phrow"><span>${o.S.icon} ${esc(o.S.name)}</span><span>平均正答率 <b>${o.rate === null ? "–" : o.rate + "%"}</b></span><span class="tsig">${[3, 2, 1].map(l => o.lv[l] ? `<span class="sig s${l}"><i></i>${o.lv[l]}人</span>` : "").join("")}</span></div>`).join("")}</div>` : ""}
+      <h2 class="section-title">つまずいている分野<small>間違えたまま・苦手分野にあげている人数</small></h2>
+      ${topC.length ? `<div class="phtable">${topC.map(([k, o]) => { const [sid, cid] = k.split("/"), S = subjById[sid], c = S && S.categories.find(x => x.id === cid); if (!c) return "";
+        return `<div class="phrow"><span>${c.icon} ${esc(c.name)}<small class="tsub"> ${esc(S.name)}</small></span><b>${o.st.size}人</b><button class="wbtn" data-preset="${k}">全員の課題に</button><small>${o.q ? `間違えたままの問題 のべ${o.q}問` : ""}${o.rates.length ? `${o.q ? "・" : ""}苦手分野の正答率 ${Math.min(...o.rates)}〜${Math.max(...o.rates)}%` : ""}</small></div>`; }).join("")}</div>` : `<p class="note">まだ集計できるデータがありません。</p>`}
+      <h2 class="section-title">多くの生徒が間違えている問題</h2>
+      ${topQ.length ? `<div class="missed">${topQ.map(([id, n]) => { const q = qById[id]; return `<details class="missed-item"><summary><b>${n}人</b>　<small class="tsub">${esc(subjById[subjOfQ[id]].name)}・${esc(catOf(q).name)}</small> ${esc(shortQ(q))}</summary><div class="sb">${factsHtml(q)}<p class="ex">${esc(q.e)}</p></div></details>`; }).join("")}</div>` : `<p class="note">まだ集計できるデータがありません。</p>`}
+      ${footer()}`;
+    document.getElementById("to-t").onclick = () => go("teacher");
+    $app.querySelectorAll("[data-preset]").forEach(b => b.onclick = () => { const [sid, c] = b.dataset.preset.split("/"); presetAsg = { k: "cat", sid, c, n: 10, txt: "", due: "" }; go("teacher/all"); });
+    wireFooter();
+    document.title = "クラス共通のつまずき｜指導者ページ";
+    window.scrollTo(0, 0);
+  }
+
+  // ---------- 指導者ページ：面談用の1枚レポート（印刷） ----------
+  function renderTPrint(id) {
+    session = null; current = null;
+    const x = tch.sts[id], r = x.rep, M = repMetrics(r), tg = repTargets(r);
+    const mocks = {}; (r.mk || []).filter(m => m[1] > r.t - 30 * DAY).forEach(m => { (mocks[m[0]] = mocks[m[0]] || []).push(m); });
+    const rs = r.r || {}, rTot = (rs.k || 0) + (rs.y || 0) + (rs.m || 0) + (rs.u || 0);
+    const own = (x.sent || []).concat(tch.all || []).filter(s => s.t > r.t - 30 * DAY).flatMap(s => s.a || []);
+    $app.innerHTML = `
+      <div class="noprint">
+        <button class="back" id="to-s" style="margin-bottom:14px">← ${esc(r.nk || "")}さん</button>
+        <div class="actions" style="margin-bottom:14px"><button class="btn dark" id="p-print">🖨 印刷する</button><button class="btn" id="to-s2">もどる</button></div>
+        <p class="fh" style="margin-bottom:12px">「次の目標」は書き込んでから印刷できます（保存されます）。</p>
+      </div>
+      <div class="printpage">
+        <div class="pp-h"><h1>学習レポート（面談用）</h1><span>${esc(r.nk || "")}さん　${fmtMD(r.t - 29 * DAY)}〜${fmtMD(r.t)}　${esc(tch.name || "")}</span></div>
+        <div class="overall">
+          <div class="stat"><div class="num">${M.m30.days}<small style="font-size:13px">日</small></div><div class="lbl">学習した日（30日間）</div></div>
+          <div class="stat"><div class="num">${M.m30.n}</div><div class="lbl">解いた問題</div></div>
+          <div class="stat"><div class="num">${M.m30.rate === null ? "–" : M.m30.rate + "%"}</div><div class="lbl">正答率・${Math.round(M.m30.min / 6) / 10}時間</div></div>
+        </div>
+        ${calendarHtml(5, repLog(r))}
+        ${r.p ? `<p class="pp-p">受験日 ${dateJa(r.p.ex)}（あと${daysTo(r.p.ex)}日）・${PH[r.p.ph]}期・${r.p.lag ? "計画より" + r.p.lag + "問遅れ" : "計画どおり"}・受験科目 ${tg.length}科目</p>` : ""}
+        <table class="qtable pp-t"><thead><tr><th>科目</th><th>合格ライン</th><th>挑戦</th><th>正答率</th><th>最頻出の理解度</th><th>模擬試験</th></tr></thead><tbody>
+          ${SUBJ.filter(S => (r.s || {})[S.id]).map(S => { const v = r.s[S.id]; return `<tr${tg.includes(S.id) ? "" : ' class="pp-dim"'}><td>${esc(S.name)}</td><td>${["データ不足", "要強化", "もう一歩", "合格圏"][v[6] || 0]}</td><td class="n">${v[0]}/${v[1]}</td><td class="n">${v[7] === null ? "–" : v[7] + "%"}</td><td class="n">${v[8] === null ? "–" : v[8] + "%"}</td><td class="n">${mocks[S.id] ? mocks[S.id].map(m => Math.round(m[3] / m[2] * 100) + "%").join("→") : "–"}</td></tr>`; }).join("")}
+        </tbody></table>
+        <div class="pp-2">
+          <div><h3>苦手分野</h3>${(r.wk || []).slice(0, 5).map(w => { const S = subjById[w[0]], c = S && S.categories.find(y => y.id === w[1]); return c ? `<div>${esc(c.name)}（${esc(SHORT[w[0]])}）${w[2]}%</div>` : ""; }).join("") || "<div>なし</div>"}</div>
+          <div><h3>間違いの理由（30日）</h3>${rTot ? REASONS.map(([k, t]) => `<div>${t}：${rs[k] || 0}</div>`).join("") : "<div>記録なし</div>"}<div>迷って正解：${r.g || 0}問</div></div>
+        </div>
+        ${own.length ? `<h3>この1か月の課題</h3><div class="pp-a">${own.map(a => `<div>${(r.a || {})[a.id] ? "✓" : "□"} ${esc(asgLabel(a))}</div>`).join("")}</div>` : ""}
+        <h3>次の目標</h3>
+        <textarea id="p-goal" class="fi pp-goal" placeholder="例：社会福祉の最頻出テーマの理解度を60%に。週末に模擬試験を1回。">${esc(x.goal || "")}</textarea>
+      </div>`;
+    document.getElementById("to-s").onclick = document.getElementById("to-s2").onclick = () => go("teacher/s/" + id);
+    document.getElementById("p-print").onclick = () => window.print();
+    document.getElementById("p-goal").onchange = e => { x.goal = e.target.value.slice(0, 1000); saveTeacher(); };
+    document.title = `${r.nk || ""}さん 学習レポート`;
+    window.scrollTo(0, 0);
+  }
+
   // ---------- keyboard ----------
   document.addEventListener("keydown", e => {
     if (mock && !mock.done && document.querySelector(".mpal")) {
@@ -1965,7 +2762,7 @@
   // ---------- transfer code (works without login) ----------
   const CODE_PREFIX = "HKG1:";
   function encode() {
-    return CODE_PREFIX + btoa(unescape(encodeURIComponent(JSON.stringify({ s: stats, v: rv, f: fm, r: resetAt, rs: resets, l: log, cf, p: plan, mk, ck }))));
+    return CODE_PREFIX + btoa(unescape(encodeURIComponent(JSON.stringify({ s: stats, v: rv, f: fm, r: resetAt, rs: resets, l: log, cf, p: plan, mk, ck, me, tf }))));
   }
   function decode(code) {
     code = code.replace(/\s+/g, "");
@@ -2014,6 +2811,8 @@
       if (obj.p && typeof obj.p === "object" && typeof obj.p.exam === "string") plan = mergePlan(plan, obj.p);
       mk = mergeMk(mk, Array.isArray(obj.mk) ? obj.mk : []);
       ck = mergeT(ck, obj2(obj.ck));
+      if (obj.me && typeof obj.me === "object" && typeof obj.me.id === "string") me = mergeMe(me, { id: obj.me.id.slice(0, 40), nick: String(obj.me.nick || "").slice(0, 20), t: +obj.me.t || 0 });
+      if (obj.tf && typeof obj.tf === "object") tf = mergeTf(tf, obj.tf);
       syncRv();
       saveLocal(); schedulePush();
       msg.style.color = "var(--accent)";
@@ -2034,7 +2833,7 @@
       resets[resetTarget] = now;
       subjById[resetTarget].questions.forEach(q => { delete stats[q.id]; delete rv[q.id]; delete fm[q.id]; delete cf[q.id]; });
       mk = mk.filter(m => m.sid !== resetTarget);
-    } else { stats = {}; rv = {}; fm = {}; cf = {}; log = {}; mk = []; ck = {}; resetAt = now; } // 学習プランの設定は残す
+    } else { stats = {}; rv = {}; fm = {}; cf = {}; log = {}; mk = []; ck = {}; resetAt = now; } // 学習プランの設定・先生からの返信は残す
     saveLocal(); push();
     modal.classList.remove("show"); route();
   };
