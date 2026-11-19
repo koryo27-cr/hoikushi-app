@@ -17,6 +17,8 @@ def load(path):
     spec = importlib.util.spec_from_file_location(path.stem, path)
     m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m); return m
 
+ASOF = {}
+
 def pick(correct, pool, rng, prefer):
     pool = [p for p in pool if p != correct]
     rng.shuffle(pool)
@@ -101,6 +103,8 @@ def build(path):
         if items: d["items"] = items
         d.update(extra); qs.append(d)
     ids = [q["id"] for q in qs]; assert len(ids) == len(set(ids)), "duplicate id"
+    for q in qs:  # 制度情報の根拠（鮮度管理、tools/asof.py）
+        if q["id"] in ASOF: q["y"] = ASOF[q["id"]]
     cats_out = [dict(c) for c in m.CATS]
     notes_file = ROOT / "notes" / path.name  # 分野ごとの要点（復習用の学習内容）
     if notes_file.exists():
@@ -127,5 +131,6 @@ def build(path):
     print(f"{meta['name']:<9} 計{len(qs):>4}  {dict(kinds)}")
 
 if __name__ == "__main__":
+    ASOF.update(load(ROOT / "asof.py").ASOF)
     for f in sorted(glob.glob(str(ROOT / "specs" / "*.py"))):
         build(pathlib.Path(f))
