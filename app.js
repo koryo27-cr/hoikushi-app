@@ -121,7 +121,8 @@
     const minT = (x, y) => { const o = Object.assign({}, x); Object.entries(y || {}).forEach(([k, v]) => { if (!o[k] || v < o[k]) o[k] = v; }); return o; };
     return { fb: byId(a.fb, b.fb).slice(-60), asg: byId(a.asg, b.asg).slice(-120), done: minT(a.done, b.done), imp: minT(a.imp, b.imp), seen: Math.max(a.seen || 0, b.seen || 0) };
   }
-  const mergeMe = (a, b) => !a ? b || null : !b ? a : ((a.t || 0) >= (b.t || 0) ? Object.assign({}, a, { id: a.id || b.id }) : Object.assign({}, b, { id: a.id || b.id }));
+  // me：新しいほうを優先しつつ、片方にしかない項目（提出用の鍵など）も残す
+  const mergeMe = (a, b) => !a ? b || null : !b ? a : ((a.t || 0) >= (b.t || 0) ? Object.assign({}, b, a, { id: a.id || b.id }) : Object.assign({}, a, b, { id: a.id || b.id }));
   const mergePlan = (a, b) => !a ? b || null : !b ? a : ((a.t || 0) >= (b.t || 0) ? a : b);
 
   // 以前の版の記録（直近で不正解）や他の端末の記録から、復習リストを補う
@@ -545,6 +546,7 @@
       if (!tKey) { pendingReport = raw.slice(2); replaceHash("teacher"); return renderTLock(); }
       return linkImport(raw.slice(2));
     }
+    if (/^j=/.test(raw)) { pendingJoin = raw.slice(2); replaceHash("send"); return renderSend(); } // 教室への参加リンク
     if (/^f=/.test(raw)) { pendingReply = raw.slice(2); replaceHash("send"); return renderSend(); } // 先生からの返信のリンク
     const [id, sub, third] = raw.split("/");
     const S = subjById[id];
@@ -1140,6 +1142,7 @@
     const r = session.results;
     if (session.menu && r.length) { markMenu(session.menu); session.menu = null; }
     if (session.asg && r.length) { markAsg(session.asg); session.asg = null; }
+    if (r.length) maybeAutoSubmit(true);
     const okN = r.filter(x => x.ok).length;
     const pct = r.length ? Math.round(okN / r.length * 100) : 0;
     const allMissed = [...new Set(r.filter(x => !x.ok).map(x => x.q))];
@@ -1790,6 +1793,7 @@
     saveLocal(); schedulePush();
     if (mock.menu) markMenu(mock.menu);
     if (mock.asg) markAsg(mock.asg);
+    maybeAutoSubmit(true);
     renderMockResult();
   }
   function renderMockResult() {
@@ -2228,63 +2232,120 @@
   let pendingReply = "";
   function renderSend() {
     session = null; current = null; ensureMe();
-    const fbs = tf.fb.slice().reverse(), asgs = tf.asg.slice().reverse();
+    const fbs = tf.fb.slice().reverse(), asgs = tf.asg.slice().reverse(), srv = me.srv;
     $app.innerHTML = `
       <button class="back" id="to-top" style="margin-bottom:14px">← トップ</button>
       <div class="brand"><span class="badge">✉️ 先生とのやりとり</span></div>
       <h1>先生に送る・先生から受け取る</h1>
-      <p class="lead">学習の状況をまとめた「レポートコード」を作って、LINEやメールで先生に送ります。先生から返信コードが届いたら、下に貼るとコメントと課題がアプリに入ります。</p>
+      <p class="lead">${srv ? `「${esc(srv.n || "教室")}」に参加しています。「提出する」を押すと、学習の状況が先生に届きます。先生からの返信は、アプリを開くと自動で届きます。`
+        : "先生からもらった「教室への参加リンク」を開くと、アプリから直接提出できるようになります。参加していなくても、レポートコードをLINEやメールで送れます。"}</p>
+      <div id="s-join"></div>
       ${fbs.length ? `<h2 class="section-title">先生からのメッセージ</h2><div class="fblist">${fbs.slice(0, 10).map(f => `<div class="fbitem"><div class="fbh"><b>${esc(f.fr || "先生")}</b><span>${fmtMD(f.t)}</span></div><div class="fbt">${nl(f.txt)}</div></div>`).join("")}</div>` : ""}
       ${asgs.length ? `<h2 class="section-title">先生の課題<small>${asgs.filter(a => tf.done[a.id]).length} / ${asgs.length} 完了</small></h2>
         <div class="asglist">${asgs.slice(0, 20).map(a => `<div class="asgrow${tf.done[a.id] ? " done" : ""}"><span>${tf.done[a.id] ? "✓" : "□"}</span><div><b>${esc(asgLabel(a))}</b>${asgNote(a) ? `<small>「${esc(asgNote(a))}」</small>` : ""}<small>${fmtMD(a.t)}に受け取り${a.due ? "・期限 " + fmtMD(parseDay(a.due)) : ""}${tf.done[a.id] ? "・" + fmtMD(tf.done[a.id]) + "に完了" : ""}</small></div>${tf.done[a.id] ? "" : `<button class="wbtn" data-run="${esc(a.id)}">${a.k === "free" ? "やった" : "始める"}</button>`}</div>`).join("")}</div>` : ""}
-      <h2 class="section-title">① 先生にレポートを送る</h2>
+      <h2 class="section-title">① 先生に${srv ? "提出する" : "レポートを送る"}</h2>
       <div class="form">
         <label class="fl">ニックネーム<small>本名でなくてかまいません。先生がわかる名前に</small></label>
         <input id="s-nick" class="fi" maxlength="20" value="${esc(me.nick || "")}" placeholder="例：ゆうこ" style="width:100%">
         <label class="fl">先生に見えるもの</label>
         <ul class="sendlist">
-          <li>ニックネームと、レポートを作った日時</li>
+          <li>ニックネームと、${srv ? "提出" : "レポートを作っ"}た日時</li>
           <li>直近6週間の、日ごとの問題数・正答数・学習時間</li>
           <li>科目ごとの成績（挑戦した数・正答率・合格ライン信号・最頻出テーマの理解度・復習の数）と苦手分野</li>
           <li>間違いの理由の内訳、迷って正解した数</li>
           <li>間違えた問題・迷って正解した問題の番号（先生のアプリで同じ問題を開くため）</li>
           <li>模擬試験の結果、学習プラン（受験日・受験科目・段階・遅れ）、先生の課題が終わったかどうか</li>
         </ul>
-        <p class="fh">送らないもの：本名・メールアドレス・端末の情報、1問ごとの解答の細かい記録。レポートはどこにも保存されず、コードを受け取った人だけが読めます。送り先をまちがえないようにしてください。</p>
+        <p class="fh">送らないもの：本名・メールアドレス・端末の情報、1問ごとの解答の細かい記録。${srv ? "提出したレポートは先生のGoogleスプレッドシートに保存され、指導者ページのパスコードを知っている先生だけが読めます。" : "レポートはどこにも保存されず、コードを受け取った人だけが読めます。送り先をまちがえないようにしてください。"}</p>
         <details class="howto" id="s-prevd"><summary>先生の画面での見え方を確認する</summary><div id="s-prev"></div></details>
-        <label class="ckrow consent"><input type="checkbox" id="s-ok"><span>内容を確認しました。先生に送ります</span></label>
-        <button class="btn dark wide" id="s-make" disabled>レポートコードを作る</button>
+        <label class="ckrow consent"><input type="checkbox" id="s-ok"${srv && me.auto ? " checked" : ""}><span>内容を確認しました。先生に送ります</span></label>
+        ${srv ? `<button class="btn dark wide" id="s-submit" ${me.auto ? "" : "disabled"} style="background:var(--accent);border-color:var(--accent)">📮 提出する</button>
+          <label class="ckrow consent"><input type="checkbox" id="s-auto"${me.auto ? " checked" : ""}><span>これからは、アプリを開いたときと学習のあとに自動で提出する（1日1回〜3時間おき）</span></label>
+          <p class="fh" id="s-last">${me.lastSub ? `前回の提出：${fmtDT(me.lastSub)}（${ago(me.lastSub)}）` : "まだ提出していません。"}</p>` : ""}
+        <button class="btn ${srv ? "" : "dark "}wide" id="s-make" disabled>${srv ? "かわりにレポートコードを作る（LINEなどで送る）" : "レポートコードを作る"}</button>
         <p class="fh" id="s-msg"></p>
         <div id="s-out"></div>
       </div>
-      <h2 class="section-title" style="margin-top:22px">② 先生からの返信を取り込む</h2>
+      <h2 class="section-title" style="margin-top:22px">② 教室（提出先）</h2>
+      <div class="form" style="padding-top:12px">
+        ${srv ? `<p style="margin:0 0 6px">📮 <b>${esc(srv.n || "教室")}</b> に参加しています${srv.t ? `（${fmtMD(srv.t)}から）` : ""}</p>
+          <div class="codebtns"><button class="btn" id="s-inbox">先生からの返信を確認する</button><button class="btn" id="s-leave">教室から抜ける</button></div>
+          <p class="fh" id="s-inmsg"></p>`
+        : `<label class="fl" style="margin-top:0">先生からもらった参加リンク（または参加コード HKJ1:…）を貼る</label>
+          <textarea id="s-jin" class="fi codebox"></textarea>
+          <button class="btn wide" id="s-jread" style="margin-top:6px">参加する</button>
+          <p class="fh" id="s-jmsg"></p>`}
+      </div>
+      <h2 class="section-title" style="margin-top:22px">③ 返信コードを取り込む<small>先生からコードで届いたとき</small></h2>
       <div class="form" style="padding-top:12px">
         <textarea id="s-in" class="fi codebox" placeholder="先生から届いた返信コード（HKT2:…）を貼り付け">${esc(pendingReply)}</textarea>
         <div id="s-inres"></div>
         <button class="btn dark wide" id="s-read" style="margin-top:8px">読み取る</button>
       </div>
       ${footer()}`;
-    document.getElementById("to-top").onclick = () => go(null);
+    const q = id => document.getElementById(id);
+    q("to-top").onclick = () => go(null);
     $app.querySelectorAll("[data-run]").forEach(b => b.onclick = () => { const a = tf.asg.find(x => x.id === b.dataset.run); if (a) runAsg(a); });
-    const nick = document.getElementById("s-nick"), ok = document.getElementById("s-ok"), mk2 = document.getElementById("s-make"), msg = document.getElementById("s-msg");
-    const upd = () => { mk2.disabled = !ok.checked; };
-    ok.onchange = upd;
+    const nick = q("s-nick"), ok = q("s-ok"), mk2 = q("s-make"), sub = q("s-submit"), msg = q("s-msg");
+    const upd = () => { mk2.disabled = !ok.checked; if (sub) sub.disabled = !ok.checked; };
+    ok.onchange = upd; upd();
     nick.onchange = () => { me.nick = nick.value.trim().slice(0, 20); me.t = Date.now(); saveLocal(); schedulePush(); };
-    document.getElementById("s-prevd").ontoggle = e => { if (e.target.open) { const r = buildReport(); r.nk = nick.value.trim() || "（ニックネーム）"; document.getElementById("s-prev").innerHTML = `<div class="tprev">${studentBodyHtml(r, { preview: true })}</div>`; } };
+    const needNick = () => { const nv = nick.value.trim().slice(0, 20); if (!nv) { msg.textContent = "ニックネームを入れてください。"; msg.style.color = "var(--wrong)"; nick.focus(); return null; } if (nv !== me.nick) { me.nick = nv; me.t = Date.now(); saveLocal(); schedulePush(); } return nv; };
+    q("s-prevd").ontoggle = e => { if (e.target.open) { const r = buildReport(); r.nk = nick.value.trim() || "（ニックネーム）"; q("s-prev").innerHTML = `<div class="tprev">${studentBodyHtml(r, { preview: true })}</div>`; } };
     mk2.onclick = async () => {
-      const nv = nick.value.trim().slice(0, 20);
-      if (!nv) { msg.textContent = "ニックネームを入れてください。"; msg.style.color = "var(--wrong)"; nick.focus(); return; }
-      me.nick = nv; me.t = Date.now(); saveLocal(); schedulePush();
+      const nv = needNick(); if (!nv) return;
       mk2.disabled = true; mk2.textContent = "作成中…";
       const code = await pack(REP_PREFIX, buildReport());
       msg.textContent = "";
-      document.getElementById("s-out").innerHTML = `<div class="codeout">${codeOutHtml(code, "r", "このコードを先生に送ってください。")}</div>`;
+      q("s-out").innerHTML = `<div class="codeout">${codeOutHtml(code, "r", "このコードを先生に送ってください。")}</div>`;
       wireCodeOut(code, "r", `${nv}さんの学習レポート（保育士試験アプリ）`);
       mk2.textContent = "作り直す"; mk2.disabled = false;
     };
-    const readBtn = document.getElementById("s-read");
+    if (sub) {
+      const au = q("s-auto");
+      au.onchange = () => { me.auto = au.checked; me.t = Date.now(); saveLocal(); schedulePush(); };
+      sub.onclick = async () => {
+        if (!needNick()) return;
+        sub.disabled = true; sub.textContent = "提出しています…";
+        try {
+          await submitReport();
+          msg.style.color = "var(--accent)"; msg.textContent = `✓ 提出しました（${fmtDT(me.lastSub)}）。先生が指導者ページを開くと届きます。`;
+          q("s-last").textContent = `前回の提出：${fmtDT(me.lastSub)}（今日）`;
+          sub.textContent = "📮 もう一度提出する";
+        } catch (e) {
+          msg.style.color = "var(--wrong)";
+          msg.textContent = e.message === "tok" ? "この端末からは提出できません。最初に提出した端末で「記録の引き継ぎ」をしてから提出してください。"
+            : "提出できませんでした。電波のよいところでもう一度試すか、かわりにレポートコードを作って送ってください。";
+          sub.textContent = "📮 提出する";
+        }
+        sub.disabled = !ok.checked;
+      };
+    }
+    // 教室への参加
+    const showJoin = async code => {
+      const box = q("s-join"), r = await readJoin(code);
+      if (r.st !== "ok") { box.innerHTML = `<div class="warn">${r.st === "none" ? "参加リンクが見つかりません。" : "先生が作った参加リンクとして確かめられません。先生にもう一度もらってください。"}</div>`; return; }
+      box.innerHTML = `<div class="rprev" style="margin-bottom:16px"><b>📮「${esc(r.srv.n || "教室")}」に参加しますか？</b><span>参加すると、このアプリから先生に直接提出でき、先生からの返信が自動で届きます。${me.srv ? `（いまの「${esc(me.srv.n || "教室")}」から切り替わります）` : ""}</span>
+        <div class="codebtns" style="margin-top:8px"><button class="btn dark" id="s-jok" style="background:var(--accent);border-color:var(--accent)">参加する</button><button class="btn" id="s-jno">やめる</button></div></div>`;
+      q("s-jok").onclick = () => { me.srv = r.srv; if (!me.tok) me.tok = newTok(); me.t = Date.now(); saveLocal(); schedulePush(); pendingJoin = ""; renderSend(); window.scrollTo(0, 0); syncServer(true); };
+      q("s-jno").onclick = () => { pendingJoin = ""; box.innerHTML = ""; };
+      box.scrollIntoView({ block: "center" });
+    };
+    if (pendingJoin) showJoin(pendingJoin);
+    const jr = q("s-jread"); if (jr) jr.onclick = () => showJoin(q("s-jin").value);
+    const lv = q("s-leave");
+    if (lv) lv.onclick = () => { if (!lv.dataset.c) { lv.dataset.c = 1; lv.textContent = "もう一度押すと抜けます"; return; } delete me.srv; me.auto = false; me.t = Date.now(); saveLocal(); schedulePush(); renderSend(); };
+    const ib = q("s-inbox");
+    if (ib) ib.onclick = async () => {
+      ib.disabled = true; const m = q("s-inmsg"); m.style.color = ""; m.textContent = "確認しています…";
+      const n = await checkInbox(true);
+      if (n > 0) { renderSend(); return; }
+      ib.disabled = false;
+      m.textContent = n === 0 ? "新しい返信はありません。" : "確認できませんでした。電波のよいところでもう一度試してください。";
+    };
+    const readBtn = q("s-read");
     readBtn.onclick = async () => {
-      const box = document.getElementById("s-inres"), txt = document.getElementById("s-in").value;
+      const box = q("s-inres"), txt = q("s-in").value;
       const { codes, res } = await readReplies(txt);
       if (!codes) { box.innerHTML = `<p class="fh" style="color:var(--wrong)">返信コード（HKT2:で始まるもの）が見つかりません。全体をコピーできているか確認してください。</p>`; return; }
       const good = res.filter(x => x.st === "ok");
@@ -2292,13 +2353,13 @@
         : `<p class="fh" style="color:var(--wrong)">${x.st === "done" ? "この返信はもう取り込んであります。" : x.st === "other" ? "別の生徒あての返信です（ニックネームのちがう人に届いたものかもしれません）。" : x.st === "old" || x.st === "nocrypto" ? "このブラウザでは読み取れません。Safari・Chromeを最新にしてください。" : x.st === "unsigned" ? "先生の返信として確かめられないコードです（指導者ページで作られたものではないか、古い形式です）。先生にもう一度作ってもらってください。" : "読み取れないコードがありました。"}</p>`).join("")
         + (good.length ? `<button class="btn dark wide" id="s-apply" style="margin-top:8px;background:var(--accent);border-color:var(--accent)">取り込む</button>${good.some(x => x.o.sj || x.o.wd != null || x.o.we != null) ? `<p class="fh">受験科目・時間の変更は学習プランに反映され、変更履歴に「先生が変更」と残ります。あとから自分で設定を変えることもできます。</p>` : ""}` : "");
       readBtn.style.display = good.length ? "none" : "";
-      const ap = document.getElementById("s-apply");
+      const ap = q("s-apply");
       if (ap) ap.onclick = () => { good.forEach(x => applyReply(x.o)); pendingReply = ""; go(null); };
     };
     if (pendingReply) readBtn.onclick();
     wireFooter();
     document.title = "先生に送る｜保育士資格試験問題集";
-    window.scrollTo(0, 0);
+    if (!pendingJoin) window.scrollTo(0, 0);
   }
 
   // ---------- 指導者ページの鍵（パスコード）と返信の署名 ----------
@@ -2309,7 +2370,9 @@
   const UNLOCK_KEY = "hoikushi-teacher-unlock";
   const hasCrypto = () => !!(window.crypto && crypto.subtle);
   const normPass = p => String(p).normalize("NFKC").replace(/[\s-]/g, "").toLowerCase();
-  let tKey = null, tLabel = "", pendingReport = "";
+  let tKey = null, tLabel = "", tApi = "", pendingReport = "";
+  // 受け取り用サーバー（Apps Script）に先生だと示す合言葉。同じ鍵ならどのパスコードで開いても同じになる
+  async function apiToken(pkcs8) { return b64u(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode("hoikushi-api:" + b64u(pkcs8))))); }
   const importSign = pkcs8 => crypto.subtle.importKey("pkcs8", pkcs8, { name: "ECDSA", namedCurve: "P-256" }, false, ["sign"]);
   async function unlockTeacher(pass, remember) {
     if (!TK || !hasCrypto()) return false;
@@ -2319,7 +2382,7 @@
         const base = await crypto.subtle.importKey("raw", enc.encode(normPass(pass)), "PBKDF2", false, ["deriveKey"]);
         const key = await crypto.subtle.deriveKey({ name: "PBKDF2", salt: unb64u(L.salt), iterations: L.it, hash: "SHA-256" }, base, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
         const pkcs8 = new Uint8Array(await crypto.subtle.decrypt({ name: "AES-GCM", iv: unb64u(L.iv) }, key, unb64u(L.ct)));
-        tKey = await importSign(pkcs8); tLabel = L.label;
+        tKey = await importSign(pkcs8); tLabel = L.label; tApi = await apiToken(pkcs8);
         try {
           if (remember) localStorage.setItem(UNLOCK_KEY, JSON.stringify({ kid: TK.kid, label: L.label, k: b64u(pkcs8), exp: Date.now() + 30 * DAY }));
           else localStorage.removeItem(UNLOCK_KEY);
@@ -2336,10 +2399,10 @@
       if (!r) return;
       // 鍵が作り直された・パスコードが無効にされた・期限切れのときは使わない
       if (!TK || !hasCrypto() || r.kid !== TK.kid || !TK.locks.some(L => L.label === r.label) || r.exp < Date.now()) { localStorage.removeItem(UNLOCK_KEY); return; }
-      tKey = await importSign(unb64u(r.k)); tLabel = r.label;
+      tKey = await importSign(unb64u(r.k)); tLabel = r.label; tApi = await apiToken(unb64u(r.k));
     } catch (e) { tKey = null; }
   }
-  function lockTeacher() { tKey = null; tLabel = ""; try { localStorage.removeItem(UNLOCK_KEY); } catch (e) {} }
+  function lockTeacher() { tKey = null; tLabel = ""; tApi = ""; try { localStorage.removeItem(UNLOCK_KEY); } catch (e) {} }
   async function signReply(o) {
     const p = JSON.stringify(o);
     const sig = new Uint8Array(await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, tKey, new TextEncoder().encode(p)));
@@ -2354,6 +2417,84 @@
       return ok ? JSON.parse(w.p) : null;
     } catch (e) { return null; }
   }
+  // ---------- 受け取り用サーバー（Googleスプレッドシート＋Apps Script）とのやりとり ----------
+  const JOIN_PREFIX = "HKJ1:";
+  const okServerUrl = u => /^https:\/\/script\.google(usercontent)?\.com\/[^\s"'<>]+$/.test(u) || /^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?\/[^\s"'<>]*$/.test(u);
+  async function api(url, payload) {
+    const ctl = typeof AbortController !== "undefined" ? new AbortController() : null;
+    const tm = setTimeout(() => { if (ctl) ctl.abort(); }, 30000);
+    try {
+      // Content-Type を付けない（text/plain）ことで、Apps Script にそのまま届く
+      const r = await fetch(url, { method: "POST", body: JSON.stringify(payload), redirect: "follow", signal: ctl ? ctl.signal : undefined });
+      return await r.json();
+    } finally { clearTimeout(tm); }
+  }
+  const newTok = () => b64u(crypto.getRandomValues(new Uint8Array(18)));
+  function repSummary(r) {
+    const M = repMetrics(r);
+    return { last: M.last ? fmtMD(M.last) : "", w: M.w1.n, rate: M.w1.rate, ph: r.p ? PH[r.p.ph] + "期" : "",
+      lag: r.p ? (r.p.lag ? r.p.lag + "問遅れ" : "予定どおり") : "", flags: M.flags.filter(f => f[0] !== "old").map(f => f[1]).join("／") };
+  }
+  async function submitReport() {
+    ensureMe();
+    if (!me.srv) throw new Error("nosrv");
+    if (!me.tok) { me.tok = newTok(); me.t = Date.now(); }
+    const r = buildReport();
+    const j = await api(me.srv.u, { act: "submit", rep: r, tok: me.tok, sum: repSummary(r) });
+    if (!j || !j.ok) throw new Error((j && j.err) || "ng");
+    me.lastSub = Date.now(); me.t = Date.now();
+    saveLocal(); schedulePush();
+    return j;
+  }
+  // 1日1回（学習のあとは3時間おき）に自動で提出（本人が「自動で提出」を選んだときだけ）
+  let autoBusy = false;
+  async function maybeAutoSubmit(afterStudy) {
+    if (autoBusy || !me || !me.srv || !me.auto || !me.nick) return;
+    const last = me.lastSub || 0;
+    if (afterStudy ? Date.now() - last < 3 * 3600e3 : dayKey(last) === dayKey(Date.now())) return;
+    autoBusy = true;
+    try { await submitReport(); } catch (e) {} finally { autoBusy = false; }
+  }
+  // 先生からの返信を受け取る（署名を確かめてから取り込む）
+  let inboxBusy = false, inboxAt = 0;
+  async function checkInbox(force) {
+    if (inboxBusy || !me || !me.srv || !hasCrypto()) return -1;
+    if (!force && Date.now() - inboxAt < 10 * 60000) return 0;
+    inboxBusy = true;
+    try {
+      const j = await api(me.srv.u, { act: "inbox", id: me.id, tok: me.tok || "" });
+      inboxAt = Date.now();
+      if (!j || !j.ok) return -1;
+      let n = 0;
+      for (const w of j.w || []) {
+        try {
+          const o = await verifyReply(JSON.parse(w));
+          if (o && o.id && !tf.imp[o.id] && (o.to === "*" || o.to === me.id)) { applyReply(o); n++; }
+        } catch (e) {}
+      }
+      return n;
+    } catch (e) { return -1; } finally { inboxBusy = false; }
+  }
+  async function syncServer(force) {
+    if (!me || !me.srv) return;
+    await maybeAutoSubmit(false);
+    const n = await checkInbox(force);
+    // 返信が届いたら、トップ・プランを開いているときだけ表示を更新（入力中の画面はそのまま）
+    if (n > 0 && !session && !mock && /^#?(plan)?$/.test(location.hash || "")) route();
+  }
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") syncServer(false); });
+  // 参加リンク：先生の署名つき。先生が作ったものだけ受け付ける
+  async function readJoin(text) {
+    const c = findCodes(JOIN_PREFIX, text)[0];
+    if (!c) return { st: "none" };
+    try {
+      const o = await verifyReply(await unpackOne(c[0], c[1]));
+      if (!o || !okServerUrl(String(o.u || ""))) return { st: "bad" };
+      return { st: "ok", srv: { u: o.u, n: String(o.n || "").slice(0, 40), t: Date.now() } };
+    } catch (e) { return { st: "bad" }; }
+  }
+  let pendingJoin = "";
+
   function renderTLock(msg) {
     session = null; current = null;
     $app.innerHTML = `
@@ -2431,6 +2572,29 @@
     if (changed) { try { localStorage.setItem(TEACHER_KEY, JSON.stringify(tch)); } catch (e) {} }
     return changed;
   }
+  function mergeReport(r) {
+    if (!r || typeof r.id !== "string" || typeof r.t !== "number") throw new Error("shape");
+    r.nk = String(r.nk || "").slice(0, 20);
+    const cur = tch.sts[r.id];
+    if (cur && (cur.rep.t || 0) >= r.t) return false;
+    tch.sts[r.id] = Object.assign({ sent: [], memo: "", goal: "" }, cur, { rep: r });
+    return true;
+  }
+  // 受け取り用サーバーから提出を読み込む
+  let tLoadAt = 0, tLoadMsg = "";
+  async function loadServer() {
+    if (!tch.srv || !tApi) return { ok: false, err: "nosrv" };
+    try {
+      const j = await api(tch.srv.u, { act: "reports", auth: tApi });
+      tLoadAt = Date.now();
+      if (!j || !j.ok) return { ok: false, err: (j && j.err) || "ng" };
+      let n = 0, names = [];
+      (j.reps || []).forEach(x => { try { const r = JSON.parse(x); if (mergeReport(r)) { n++; names.push(r.nk || "名前なし"); } } catch (e) {} });
+      tch.srv.at = tLoadAt;
+      saveTeacher();
+      return { ok: true, n, total: (j.reps || []).length, names };
+    } catch (e) { return { ok: false, err: "net" }; }
+  }
   async function importReports(text) {
     const codes = findCodes(REP_PREFIX, text);
     let ok = 0, ng = 0, old = 0, stale = 0;
@@ -2438,11 +2602,7 @@
     for (const [k, d] of codes) {
       try {
         const r = await unpackOne(k, d);
-        if (!r || typeof r.id !== "string" || typeof r.t !== "number") throw new Error("shape");
-        r.nk = String(r.nk || "").slice(0, 20);
-        const cur = tch.sts[r.id];
-        if (cur && (cur.rep.t || 0) >= r.t) stale++;
-        else tch.sts[r.id] = Object.assign({ sent: [], memo: "", goal: "" }, cur, { rep: r });
+        if (!mergeReport(r)) stale++;
         ok++; names.push(r.nk || "名前なし");
       } catch (e) { if (e && e.message === "old") old++; else ng++; }
     }
@@ -2530,6 +2690,87 @@
       ${(r.gq || []).length && !opt.preview ? `<h2 class="section-title">迷って正解した問題</h2><div class="missed">${qlist(r.gq, 8)}</div>` : ""}`;
   }
 
+  // ---------- 指導者ページ：提出の受け取り（Googleスプレッドシート） ----------
+  const srvErr = e => e === "auth" ? "受け取り先に先生として認められませんでした。指導者ページの鍵を作り直した場合は、Apps Script の「スクリプト プロパティ」で TEACHER を削除してから、もう一度「接続する」を押してください。"
+    : e === "net" ? "受け取り先につながりませんでした。電波の状態と、ウェブアプリのURLを確認してください。" : "受け取り先でエラーが起きました（" + esc(e || "") + "）。";
+  const SCRIPT_URL = "https://github.com/koryo27-cr/hoikushi-app/blob/main/server/Code.gs";
+  function srvSectionHtml() {
+    const S = tch.srv;
+    if (S) return `<h2 class="section-title" style="margin-top:20px">📮 提出の受け取り<small>Googleスプレッドシート</small></h2>
+      <div class="form" style="padding-top:12px">
+        <p style="margin:0 0 4px"><b>${esc(S.n || "教室")}</b> とつながっています。生徒が「提出する」を押すと、ここに届きます。</p>
+        <p class="fh" id="t-srvmsg" style="${tLoadMsg ? "color:var(--accent)" : ""}">${tLoadMsg || (S.at ? `最後に読み込んだ日時：${fmtDT(S.at)}` : "")}</p>
+        <div class="codebtns"><button class="btn dark" id="t-load">最新の提出を読み込む</button><button class="btn" id="t-join">生徒用の参加リンクを作る</button></div>
+        <div id="t-joinout"></div>
+        <button class="link-btn" id="t-disc" style="margin-top:6px">接続を解除する</button>
+      </div>`;
+    return `<h2 class="section-title" style="margin-top:20px">📮 提出の受け取り<small>まだ設定していません</small></h2>
+      <div class="form" style="padding-top:12px">
+        <p style="margin:0 0 6px;font-size:14px">Googleスプレッドシートを受け取り先にすると、生徒はアプリの「提出する」で直接送れ、先生の返信も生徒のアプリに自動で届きます（コードの貼り付けが不要になります）。</p>
+        <ol class="steps">
+          <li>Googleスプレッドシートを新しく作る（名前は自由）。</li>
+          <li>メニューの「拡張機能」→「Apps Script」を開き、最初からある中身を消して、下の「スクリプトをコピー」で写したものを貼り付けて保存。</li>
+          <li>右上の「デプロイ」→「新しいデプロイ」→ 種類「ウェブアプリ」。実行するユーザー「自分」、アクセスできるユーザー「全員」で「デプロイ」し、Googleアカウントでアクセスを承認。</li>
+          <li>表示された「ウェブアプリのURL」を下に貼り、「接続する」。</li>
+        </ol>
+        <div class="codebtns"><button class="btn" id="t-scopy">スクリプトをコピー</button><a class="btn" href="${SCRIPT_URL}" target="_blank" rel="noopener" style="text-align:center;text-decoration:none">スクリプトを見る</a></div>
+        <textarea id="t-stext" class="fi codebox" readonly style="display:none;height:120px;margin-top:6px"></textarea>
+        <label class="fl">ウェブアプリのURL</label>
+        <input id="t-surl" class="fi" style="width:100%" placeholder="https://script.google.com/macros/s/…/exec" autocapitalize="off" spellcheck="false">
+        <label class="fl">教室の名前<small>生徒の画面に出ます</small></label>
+        <input id="t-sname" class="fi" style="width:100%" maxlength="40" placeholder="例：保育士試験対策講座 火曜クラス">
+        <button class="btn dark wide" id="t-sconn" style="margin-top:10px">接続する</button>
+        <p class="fh" id="t-srvmsg"></p>
+        <p class="fh">提出されたレポートは先生のGoogleドライブ（このスプレッドシート）に保存されます。誰がいつ消すかを教室で決めておいてください。</p>
+      </div>`;
+  }
+  function wireSrvSection() {
+    const q = id => document.getElementById(id), msg = q("t-srvmsg");
+    const say = (t, bad) => { msg.style.color = bad ? "var(--wrong)" : "var(--accent)"; msg.innerHTML = t; };
+    tLoadMsg = "";
+    if (!tch.srv) {
+      q("t-scopy").onclick = async e => {
+        const b = e.target;
+        try {
+          const txt = await (await fetch("server/Code.gs", { cache: "no-store" })).text();
+          if (!/function doPost/.test(txt)) throw 0;
+          const ta = q("t-stext"); ta.value = txt; ta.style.display = "";
+          try { await navigator.clipboard.writeText(txt); b.textContent = "コピーしました ✓"; } catch (_) { ta.focus(); ta.select(); b.textContent = "下を全部選んでコピー"; }
+        } catch (err) { b.textContent = "読み込めませんでした。「スクリプトを見る」からコピー"; }
+      };
+      q("t-sconn").onclick = async () => {
+        const u = q("t-surl").value.trim(), n = q("t-sname").value.trim().slice(0, 40);
+        if (!okServerUrl(u)) return say("ウェブアプリのURL（https://script.google.com/macros/s/…/exec）を貼ってください。", true);
+        say("接続しています…");
+        try {
+          const a = await api(u, { act: "setup", auth: tApi });
+          if (!a || !a.ok) return say(a && a.already ? srvErr("auth") : "接続できませんでした。デプロイのとき「アクセスできるユーザー：全員」にしたか確認してください。", true);
+          const p = await api(u, { act: "ping", auth: tApi });
+          if (!p || !p.teacher) return say(srvErr("auth"), true);
+          tch.srv = { u, n: n || "教室", t: Date.now() };
+          saveTeacher(); tLoadAt = 0;
+          teacherMsg = `受け取り先「${esc(tch.srv.n)}」に接続しました。次に「生徒用の参加リンクを作る」で生徒に配ってください。`;
+          renderTeacher();
+        } catch (e) { say("接続できませんでした。URLが正しいか、デプロイのとき「アクセスできるユーザー：全員」にしたか確認してください。", true); }
+      };
+      return;
+    }
+    q("t-load").onclick = async e => {
+      e.target.disabled = true; say("読み込んでいます…");
+      const r = await loadServer();
+      if (!r.ok) { e.target.disabled = false; return say(srvErr(r.err), true); }
+      tLoadMsg = r.n ? `新しい提出 ${r.n}件（${r.names.map(esc).join("・")}）を読み込みました。` : `新しい提出はありません（提出 ${r.total}件）。`;
+      renderTeacher();
+    };
+    q("t-join").onclick = async () => {
+      const code = await pack(JOIN_PREFIX, await signReply({ u: tch.srv.u, n: tch.srv.n, t: Date.now() }));
+      q("t-joinout").innerHTML = `<div class="codeout">${codeOutHtml(code, "j", "生徒に送ってください。生徒がリンクを開く（またはコードを「先生に送る」画面に貼る）と、この教室に参加できます。")}</div>`;
+      wireCodeOut(code, "j", `「${tch.srv.n}」への参加リンク（保育士試験アプリ）`);
+    };
+    const dc = q("t-disc");
+    dc.onclick = () => { if (!dc.dataset.c) { dc.dataset.c = 1; dc.textContent = "もう一度押すと解除します（スプレッドシートのデータは残ります）"; return; } delete tch.srv; saveTeacher(); renderTeacher(); };
+  }
+
   // ---------- 指導者ページ：トップ（一覧） ----------
   function renderTeacher() {
     session = null; current = null;
@@ -2541,16 +2782,22 @@
       <div class="brand"><span class="badge">👩‍🏫 指導者ページ</span></div>
       <h1>指導者ページ（先生用）</h1>
       <p class="tlockbar">🔓 パスコード「${esc(tLabel)}」で開いています<button class="link-btn" id="t-lock">ロックする</button></p>
-      <p class="lead">生徒から届いたレポートコードを貼ると、学習の状況が一覧で見られます。コメント・課題・受験科目の変更は「返信コード」にして生徒に送ります。</p>
-      <div class="form" style="padding-top:12px">
-        <label class="fl" style="margin-top:0">生徒から届いたレポートを取り込む<small>複数まとめて貼ってもかまいません</small></label>
+      <p class="lead">${tch.srv ? "生徒がアプリから提出したレポートが、下の一覧に届きます。生徒を選ぶと、コメント・課題・受験科目の変更をアプリに直接送れます。" : "生徒から届いたレポートコードを貼ると、学習の状況が一覧で見られます。コメント・課題・受験科目の変更は「返信コード」にして生徒に送ります。"}</p>
+      ${tch.srv ? srvSectionHtml() : ""}
+      <div class="form" style="padding-top:12px;margin-top:${tch.srv ? "18px" : "0"}">
+        <label class="fl" style="margin-top:0">${tch.srv ? "コードで届いたレポートを取り込む" : "生徒から届いたレポートを取り込む"}<small>複数まとめて貼ってもかまいません</small></label>
         <textarea id="t-in" class="fi codebox" placeholder="レポートコード（HKR1:…）やリンクを貼り付け"></textarea>
         <button class="btn dark wide" id="t-imp" style="margin-top:8px">取り込む</button>
         <p class="fh" id="t-msg" style="${msg ? "color:var(--accent)" : ""}">${msg}</p>
         <label class="fl">返信に表示する先生の名前</label>
         <input id="t-name" class="fi" maxlength="20" value="${esc(tch.name || "")}" placeholder="例：山田先生" style="width:100%">
       </div>
-      ${!list.length ? `<div class="notecard" style="margin-top:18px"><b>使い方</b><ol class="steps">
+      ${tch.srv ? "" : srvSectionHtml()}
+      ${!list.length && tch.srv ? `<div class="notecard" style="margin-top:18px"><b>使い方</b><ol class="steps">
+          <li>「生徒用の参加リンクを作る」で作ったリンクを、生徒に送ります（グループLINEなど）。</li>
+          <li>生徒がリンクを開いて教室に参加し、「先生に送る」→「提出する」を押すと、ここに届きます。</li>
+          <li>生徒を選んでコメントや課題を書き「返信を送る」と、生徒が次にアプリを開いたときに届きます。</li></ol></div>` : ""}
+      ${!list.length && !tch.srv ? `<div class="notecard" style="margin-top:18px"><b>使い方</b><ol class="steps">
           <li>生徒が、アプリのトップ →「先生に送る」でレポートコードを作り、LINEやメールで先生に送ります。</li>
           <li>届いたコード（またはリンク）を上の欄に貼って「取り込む」。</li>
           <li>生徒を選ぶと、科目ごとの状況・苦手分野・間違いの理由が見られます。コメントや課題を書いて「返信コードを作る」。</li>
@@ -2586,6 +2833,12 @@
     $app.querySelectorAll("[data-st]").forEach(b => b.onclick = () => go("teacher/s/" + b.dataset.st));
     $app.querySelectorAll("[data-go]").forEach(b => b.onclick = () => go(b.dataset.go));
     document.getElementById("t-name").onchange = e => { tch.name = e.target.value.trim().slice(0, 20); saveTeacher(); };
+    wireSrvSection();
+    // 受け取り先につながっていれば、開いたときに最新の提出を読み込む（1分に1回まで）
+    if (tch.srv && tApi && Date.now() - tLoadAt > 60000) loadServer().then(r => {
+      tLoadMsg = r.ok ? (r.n ? `新しい提出 ${r.n}件（${r.names.map(esc).join("・")}）を読み込みました。` : `新しい提出はありません（提出 ${r.total}件）。`) : srvErr(r.err);
+      if (!session && /^#teacher$/.test(location.hash)) { teacherMsg = msg; renderTeacher(); }
+    });
     document.getElementById("t-imp").onclick = async () => {
       const r = await importReports(document.getElementById("t-in").value);
       teacherMsg = !r.found ? "" : r.ok ? `${r.names.map(esc).join("・")}さんのレポートを取り込みました。${r.stale ? `（${r.stale}件は、すでに同じか新しいレポートがありました）` : ""}${r.ng ? `読み取れないコードが${r.ng}件ありました。` : ""}` : "";
@@ -2645,7 +2898,7 @@
         <div class="row2" style="margin-top:8px"><span>平日</span><select id="c-wd" class="fi"><option value="">変えない${r && r.p ? `（${minLabel(r.p.wd)}）` : ""}</option>${MINS.map(v => `<option value="${v}"${dr.wd === String(v) ? " selected" : ""}>${minLabel(v)}</option>`).join("")}</select>
           <span>週末</span><select id="c-we" class="fi"><option value="">変えない${r && r.p ? `（${minLabel(r.p.we)}）` : ""}</option>${MINS.map(v => `<option value="${v}"${dr.we === String(v) ? " selected" : ""}>${minLabel(v)}</option>`).join("")}</select></div>
       </details>` : ""}
-      <button class="btn dark wide" id="c-make" style="margin-top:12px">返信コードを作る</button>
+      <button class="btn dark wide" id="c-make" style="margin-top:12px">${tch.srv ? "返信を送る" : "返信コードを作る"}</button>
       <p class="fh" id="c-msg"></p>
       <div id="c-out"></div>
     </div>`;
@@ -2694,13 +2947,20 @@
       if (dr.wd) o.wd = +dr.wd;
       if (dr.we) o.we = +dr.we;
       if (!tKey) { msg.style.color = "var(--wrong)"; msg.textContent = "指導者ページがロックされました。パスコードを入れ直してください。"; return; }
-      const code = await pack(REPLY_PREFIX, await signReply(o));
+      const w = await signReply(o);
+      const code = await pack(REPLY_PREFIX, w);
+      let sent = null;
+      if (tch.srv && tApi) {
+        q("c-make").disabled = true; msg.style.color = ""; msg.textContent = "送っています…";
+        try { const j = await api(tch.srv.u, { act: "reply", auth: tApi, rid: o.id, to, w, sum: (replySummary(o).join("／") + (o.c ? "：" + o.c : "")).slice(0, 300) }); sent = !!(j && j.ok); }
+        catch (e) { sent = false; }
+      }
       const rec = { id: o.id, t: o.t, c: o.c, a: o.a, sj: o.sj || null, wd: o.wd, we: o.we };
       if (to === "*") tch.all = (tch.all || []).concat(rec).slice(-60);
       else { const x = tch.sts[to]; x.sent = (x.sent || []).concat(rec).slice(-60); }
       saveTeacher();
       delete drafts[key];
-      onSent(code);
+      onSent(code, sent);
     };
   }
   const newDraft = () => ({ c: "", a: [], sj: {}, wd: "", we: "", nb: { k: "cat", sid: SUBJ[0].id, c: null, th: null, n: 10, txt: "", due: "" } });
@@ -2711,7 +2971,14 @@
   }
 
   // ---------- 指導者ページ：生徒の詳細 ----------
-  function renderTStudent(id, code) {
+  // 返信を作ったあとの表示：受け取り先があれば「送りました」、なければ（または失敗したら）コードを表示
+  function sentBoxHtml(code, sent, who) {
+    if (sent === true) return `<div class="codeout" style="margin-bottom:12px"><b>✓ ${who}のアプリに送りました</b><p class="fh" style="margin:0">生徒が次にアプリを開いたときに届きます。</p>
+      <details class="howto" style="margin-top:6px"><summary>コードでも送る（LINEなど）</summary>${codeOutHtml(code, "f", "受け取り先を使わずに送るときのコードです。")}</details>
+      <button class="btn wide" id="c-new" style="margin-top:8px">続けて別の返信を書く</button></div>`;
+    return `<div class="codeout" style="margin-bottom:12px">${sent === false ? `<div class="warn" style="margin-bottom:8px">受け取り先に送れませんでした。かわりに下のコードを送ってください。</div>` : ""}<b>返信コードができました</b>${codeOutHtml(code, "f", "このコードを生徒に送ってください。生徒が「先生に送る」画面に貼ると取り込めます。")}<button class="btn wide" id="c-new" style="margin-top:8px">続けて別の返信を書く</button></div>`;
+  }
+  function renderTStudent(id, code, sent) {
     session = null; current = null;
     const x = tch.sts[id], r = x.rep;
     if (!drafts[id]) drafts[id] = newDraft();
@@ -2727,7 +2994,7 @@
       ${allAsg.length ? `<h2 class="section-title" style="margin-top:18px">出した課題<small>${allAsg.length - pend.length} / ${allAsg.length} 完了（このレポート時点）</small></h2>
         <div class="asglist">${allAsg.slice().reverse().slice(0, 20).map(a => `<div class="asgrow${(r.a || {})[a.id] ? " done" : ""}"><span>${(r.a || {})[a.id] ? "✓" : "□"}</span><div><b>${esc(asgLabel(a))}</b>${asgNote(a) ? `<small>「${esc(asgNote(a))}」</small>` : ""}<small>${cls.some(s => (s.a || []).includes(a)) ? "クラス全員あて・" : ""}${a.due ? "期限 " + fmtMD(parseDay(a.due)) + "・" : ""}${asgStatus(a, r)}</small></div></div>`).join("")}</div>` : ""}
       <h2 class="section-title" style="margin-top:20px">✉️ ${esc(r.nk || "")}さんに返信する</h2>
-      ${code ? `<div class="codeout" style="margin-bottom:12px"><b>返信コードができました</b>${codeOutHtml(code, "f", "このコードを生徒に送ってください。生徒が「先生に送る」画面に貼ると取り込めます。")}<button class="btn wide" id="c-new" style="margin-top:8px">続けて別の返信を書く</button></div>` : composerHtml(id, r)}
+      ${code ? sentBoxHtml(code, sent, esc(r.nk || "生徒") + "さん") : composerHtml(id, r)}
       <label class="fl">先生のメモ<small>生徒には送られません</small></label>
       <textarea id="t-memo" class="fi" style="width:100%;height:70px">${esc(x.memo || "")}</textarea>
       ${sentHtml(own, r)}
@@ -2737,16 +3004,20 @@
     document.getElementById("t-print").onclick = () => go("teacher/print/" + id);
     document.getElementById("t-memo").onchange = e => { x.memo = e.target.value.slice(0, 2000); saveTeacher(); };
     if (code) { wireCodeOut(code, "f", `${tch.name || "先生"}からの返信（保育士試験アプリ）`); document.getElementById("c-new").onclick = () => renderTStudent(id); }
-    else wireComposer(id, r, id, c => renderTStudent(id, c));
+    else wireComposer(id, r, id, (c, sn) => renderTStudent(id, c, sn));
     const del = document.getElementById("t-del");
-    del.onclick = () => { if (!del.dataset.c) { del.dataset.c = 1; del.textContent = "もう一度押すと削除します"; return; } delete tch.sts[id]; saveTeacher(); go("teacher"); };
+    del.onclick = () => {
+      if (!del.dataset.c) { del.dataset.c = 1; del.textContent = tch.srv ? "もう一度押すと削除します（スプレッドシートの提出と返信も消します）" : "もう一度押すと削除します"; return; }
+      if (tch.srv && tApi) api(tch.srv.u, { act: "remove", auth: tApi, id }).catch(() => {});
+      delete tch.sts[id]; saveTeacher(); go("teacher");
+    };
     wireFooter();
     document.title = `${r.nk || "生徒"}｜指導者ページ`;
     if (!code) window.scrollTo(0, 0); else setTimeout(() => { const o = document.querySelector(".codeout"); if (o) o.scrollIntoView({ block: "center" }); }, 30);
   }
 
   // ---------- 指導者ページ：クラス全員に返信 ----------
-  function renderTAll(code) {
+  function renderTAll(code, sent) {
     session = null; current = null;
     if (!drafts["*"]) drafts["*"] = newDraft();
     if (presetAsg) { drafts["*"].a.push(Object.assign({ id: rid() }, presetAsg)); presetAsg = null; }
@@ -2754,13 +3025,13 @@
       <button class="back" id="to-t" style="margin-bottom:14px">← クラス一覧</button>
       <div class="brand"><span class="badge">👩‍🏫 指導者ページ</span></div>
       <h1>クラス全員に返信</h1>
-      <p class="lead">同じコメント・課題を、誰でも取り込める返信コードにします。グループLINEなどで送れます（受験科目の変更は生徒ごとの返信でおこないます）。</p>
-      ${code ? `<div class="codeout"><b>返信コードができました</b>${codeOutHtml(code, "f", "クラスのグループなどに送ってください。")}<button class="btn wide" id="c-new" style="margin-top:8px">続けて別の返信を書く</button></div>` : composerHtml("*", undefined)}
+      <p class="lead">同じコメント・課題をクラス全員に送ります。${tch.srv ? "教室に参加している生徒のアプリに届きます" : "誰でも取り込める返信コードになるので、グループLINEなどで送れます"}（受験科目の変更は生徒ごとの返信でおこないます）。</p>
+      ${code ? sentBoxHtml(code, sent, "クラス全員") : composerHtml("*", undefined)}
       ${sentHtml(tch.all || [], null)}
       ${footer()}`;
     document.getElementById("to-t").onclick = () => go("teacher");
     if (code) { wireCodeOut(code, "f", `${tch.name || "先生"}からクラスへの返信（保育士試験アプリ）`); document.getElementById("c-new").onclick = () => renderTAll(); }
-    else wireComposer("*", undefined, "*", c => renderTAll(c));
+    else wireComposer("*", undefined, "*", (c, sn) => renderTAll(c, sn));
     wireFooter();
     document.title = "クラス全員に返信｜指導者ページ";
     window.scrollTo(0, 0);
@@ -2917,7 +3188,13 @@
       if (obj.p && typeof obj.p === "object" && typeof obj.p.exam === "string") plan = mergePlan(plan, obj.p);
       mk = mergeMk(mk, Array.isArray(obj.mk) ? obj.mk : []);
       ck = mergeT(ck, obj2(obj.ck));
-      if (obj.me && typeof obj.me === "object" && typeof obj.me.id === "string") me = mergeMe(me, { id: obj.me.id.slice(0, 40), nick: String(obj.me.nick || "").slice(0, 20), t: +obj.me.t || 0 });
+      if (obj.me && typeof obj.me === "object" && typeof obj.me.id === "string") {
+        const m = { id: obj.me.id.slice(0, 40), nick: String(obj.me.nick || "").slice(0, 20), t: +obj.me.t || 0 };
+        if (typeof obj.me.tok === "string") m.tok = obj.me.tok.slice(0, 64);
+        if (obj.me.srv && typeof obj.me.srv.u === "string") m.srv = { u: obj.me.srv.u, n: String(obj.me.srv.n || "").slice(0, 40), t: +obj.me.srv.t || 0 };
+        if (obj.me.auto !== undefined) m.auto = !!obj.me.auto;
+        me = mergeMe(me, m);
+      }
       if (obj.tf && typeof obj.tf === "object") tf = mergeTf(tf, obj.tf);
       syncRv();
       saveLocal(); schedulePush();
@@ -2945,5 +3222,5 @@
   };
 
   if (/[?&]debug\b/.test(location.search)) window.__hk = { start, qById, variantOf, kindsOf, hotLevel, targetForms, ALL, drillItems, phasesOf, outlook, menuItems, mockPick, crossTerms, signal, get plan() { return plan; }, get log() { return log; } };
-  restoreTeacher().finally(route);
+  restoreTeacher().finally(() => { route(); setTimeout(() => syncServer(true), 1200); });
 })();
