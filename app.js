@@ -2260,6 +2260,7 @@
         <details class="howto" id="s-prevd"><summary>先生の画面での見え方を確認する</summary><div id="s-prev"></div></details>
         <label class="ckrow consent"><input type="checkbox" id="s-ok"${srv && me.auto ? " checked" : ""}><span>内容を確認しました。先生に送ります</span></label>
         ${srv ? `<button class="btn dark wide" id="s-submit" ${me.auto ? "" : "disabled"} style="background:var(--accent);border-color:var(--accent)">📮 提出する</button>
+          <div id="s-subres"></div>
           <label class="ckrow consent"><input type="checkbox" id="s-auto"${me.auto ? " checked" : ""}><span>これからは、アプリを開いたときと学習のあとに自動で提出する（1日1回〜3時間おき）</span></label>
           <p class="fh" id="s-last">${me.lastSub ? `前回の提出：${fmtDT(me.lastSub)}（${ago(me.lastSub)}）` : "まだ提出していません。"}</p>` : ""}
         <button class="btn ${srv ? "" : "dark "}wide" id="s-make" disabled>${srv ? "かわりにレポートコードを作る（LINEなどで送る）" : "レポートコードを作る"}</button>
@@ -2309,10 +2310,12 @@
         sub.disabled = true; sub.textContent = "提出しています…";
         try {
           await submitReport();
-          msg.style.color = "var(--accent)"; msg.textContent = `✓ 提出しました（${fmtDT(me.lastSub)}）。先生が指導者ページを開くと届きます。`;
+          msg.textContent = "";
+          q("s-subres").innerHTML = `<div class="subok">✓ 提出しました（${fmtDT(me.lastSub)}）<small>先生が指導者ページを開くと届きます。</small></div>`;
           q("s-last").textContent = `前回の提出：${fmtDT(me.lastSub)}（今日）`;
           sub.textContent = "📮 もう一度提出する";
         } catch (e) {
+          q("s-subres").innerHTML = "";
           msg.style.color = "var(--wrong)";
           msg.textContent = e.message === "tok" ? "この端末からは提出できません。最初に提出した端末で「記録の引き継ぎ」をしてから提出してください。"
             : "提出できませんでした。電波のよいところでもう一度試すか、かわりにレポートコードを作って送ってください。";
