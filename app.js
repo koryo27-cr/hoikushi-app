@@ -2571,6 +2571,7 @@
     const all = {}; (tch.all || []).concat(b.all || []).forEach(r => { if (r && r.id) all[r.id] = r; });
     tch.all = Object.values(all).sort((p, q) => p.t - q.t).slice(-60);
     if ((b.t || 0) > (tch.t || 0)) { if (b.name) tch.name = b.name; if (b.tpl) tch.tpl = b.tpl; }
+    if (!tch.srv && b.srv && typeof b.srv.u === "string" && okServerUrl(b.srv.u)) tch.srv = { u: b.srv.u, n: String(b.srv.n || "教室").slice(0, 40), t: +b.srv.t || Date.now() };
     const changed = JSON.stringify(tch) !== before;
     if (changed) { try { localStorage.setItem(TEACHER_KEY, JSON.stringify(tch)); } catch (e) {} }
     return changed;
@@ -2702,6 +2703,7 @@
     if (S) return `<h2 class="section-title" style="margin-top:20px">📮 提出の受け取り<small>Googleスプレッドシート</small></h2>
       <div class="form" style="padding-top:12px">
         <p style="margin:0 0 4px"><b>${esc(S.n || "教室")}</b> とつながっています。生徒が「提出する」を押すと、ここに届きます。</p>
+        <p class="fh" style="margin:0 0 4px">ほかの端末で指導者ページを使うときは、その端末で「生徒用の参加リンク」を「ウェブアプリのURL」の欄に貼って接続します（設定は端末ごと）。</p>
         <p class="fh" id="t-srvmsg" style="${tLoadMsg ? "color:var(--accent)" : ""}">${tLoadMsg || (S.at ? `最後に読み込んだ日時：${fmtDT(S.at)}` : "")}</p>
         <div class="codebtns"><button class="btn dark" id="t-load">最新の提出を読み込む</button><button class="btn" id="t-join">生徒用の参加リンクを作る</button></div>
         <div id="t-joinout"></div>
@@ -2710,6 +2712,7 @@
     return `<h2 class="section-title" style="margin-top:20px">📮 提出の受け取り<small>まだ設定していません</small></h2>
       <div class="form" style="padding-top:12px">
         <p style="margin:0 0 6px;font-size:14px">Googleスプレッドシートを受け取り先にすると、生徒はアプリの「提出する」で直接送れ、先生の返信も生徒のアプリに自動で届きます（コードの貼り付けが不要になります）。</p>
+        <div class="warn soft" style="margin-bottom:8px"><b>別の端末（パソコンなど）ですでに設定した場合</b><p style="margin:4px 0 0">接続の設定は端末ごとに保存されます。下の手順はとばして、「ウェブアプリのURL」の欄に、その端末で作った<b>生徒用の参加リンク</b>（またはウェブアプリのURL）を貼り、「接続する」を押してください。</p></div>
         <ol class="steps">
           <li>Googleスプレッドシートを新しく作る（名前は自由）。</li>
           <li>メニューの「拡張機能」→「Apps Script」を開き、最初からある中身を消して、下の「スクリプトをコピー」で写したものを貼り付けて保存。</li>
@@ -2718,8 +2721,8 @@
         </ol>
         <div class="codebtns"><button class="btn" id="t-scopy">スクリプトをコピー</button><a class="btn" href="${SCRIPT_URL}" target="_blank" rel="noopener" style="text-align:center;text-decoration:none">スクリプトを見る</a></div>
         <textarea id="t-stext" class="fi codebox" readonly style="display:none;height:120px;margin-top:6px"></textarea>
-        <label class="fl">ウェブアプリのURL</label>
-        <input id="t-surl" class="fi" style="width:100%" placeholder="https://script.google.com/macros/s/…/exec" autocapitalize="off" spellcheck="false">
+        <label class="fl">ウェブアプリのURL<small>別の端末で設定済みなら、生徒用の参加リンクを貼ってもかまいません</small></label>
+        <input id="t-surl" class="fi" style="width:100%" placeholder="https://script.google.com/macros/s/…/exec または参加リンク" autocapitalize="off" spellcheck="false">
         <label class="fl">教室の名前<small>生徒の画面に出ます</small></label>
         <input id="t-sname" class="fi" style="width:100%" maxlength="40" placeholder="例：保育士試験対策講座 火曜クラス">
         <button class="btn dark wide" id="t-sconn" style="margin-top:10px">接続する</button>
@@ -2746,7 +2749,9 @@
         } catch (err) { b.textContent = "読み込めませんでした。「スクリプトを見る」からコピー"; }
       };
       q("t-sconn").onclick = async () => {
-        const u = q("t-surl").value.trim(), n = q("t-sname").value.trim().slice(0, 40);
+        let u = q("t-surl").value.trim(), n = q("t-sname").value.trim().slice(0, 40);
+        // 別の端末で作った「生徒用の参加リンク」を貼っても接続できる（URLと教室名が入っている）
+        if (/HKJ1/.test(u)) { const jn = await readJoin(u); if (jn.st !== "ok") return say("この参加リンクは確かめられませんでした。ウェブアプリのURLを貼ってください。", true); u = jn.srv.u; n = n || jn.srv.n; }
         if (!okServerUrl(u)) return say("ウェブアプリのURL（https://script.google.com/macros/s/…/exec）を貼ってください。", true);
         say("接続しています…");
         try {
